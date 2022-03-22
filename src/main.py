@@ -18,11 +18,13 @@ a = term.Apply(pred, cn.gen_number(n))
 print(f"pred = {pred}")
 print(f"pred {n} = {a}")
 a = a.reduce_LO(True)
-
 print(f"= {cn.get_number(a)}")
 
 
-if term.are_equal(cn.gen_number(2), term.Apply(pred, cn.gen_number(3)).reduce_LO()):
-    print("2 == pred 3")
+n2 = cn.gen_number(2)
+nn2 = term.Apply(pred, cn.gen_number(3)).reduce_LO()
+
+if n2.is_equals(nn2):
+    print(f"{cn.get_number(n2)} == pred 3 == {cn.get_number(nn2)}")
 else:
-    print("2 != pred 3")
+    print(f"{cn.get_number(n2)} != pred 3 != {cn.get_number(nn2)}")

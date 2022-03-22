@@ -42,6 +42,50 @@ class Term:
 
         return txt
 
+    def is_equals(self, term):
+        linkvar1 = []
+        linkvar2 = []
+        queue1 = []
+        queue2 = []
+        queue1.append(self)
+        queue2.append(term)
+        while len(queue1) > 0 and len(queue2) > 0:
+            t1 = queue1.pop(0)
+            t2 = queue2.pop(0)
+            # Not the same type
+            if t1.type != t2.type:
+                return False
+            # Variable
+            if t1.type == TermType.VARIABLE:
+                # 2 linked
+                if t1 in linkvar1 and t2 in linkvar2:
+                    index1 = linkvar1.index(t1)
+                    index2 = linkvar2.index(t2)
+                    if index1 != index2:
+                        return False
+                # 2 free
+                elif t1 not in linkvar1 and t2 not in linkvar2:
+                    if t1 != t2:
+                        return False
+                # no match
+                else:
+                    return False
+            # Abstract
+            elif t1.type == TermType.ABSTRACT:
+                linkvar1.append(t1.var)
+                linkvar2.append(t2.var)
+                queue1.append(t1.right)
+                queue2.append(t2.right)
+            # Apply
+            elif t1.type == TermType.APPLY:
+                queue1.append(t1.left)
+                queue1.append(t1.right)
+                queue2.append(t2.left)
+                queue2.append(t2.right)
+        if len(queue1) != len(queue2):
+            return False
+        return True
+
     # Abstract functions
     def copy(self):
         pass
@@ -53,9 +97,8 @@ class Term:
         pass
     def replace(self, var, term):
         pass
-    
-    def get_abstracted_vars(self, set=set()):
-        return set
+    def get_abstracted_vars(self):
+        pass
     
 class Abstract(Term):
     def __init__(self, var, term):
@@ -167,49 +210,4 @@ class Variable(Term):
 
     def get_abstracted_vars(self):
         return []
-
-
-def are_equal(term1, term2):
-    linkvar1 = []
-    linkvar2 = []
-    queue1 = []
-    queue2 = []
-    queue1.append(term1)
-    queue2.append(term2)
-    while len(queue1) > 0 and len(queue2) > 0:
-        t1 = queue1.pop(0)
-        t2 = queue2.pop(0)
-        # Not the same type
-        if t1.type != t2.type:
-            return False
-        # Variable
-        if t1.type == TermType.VARIABLE:
-            # 2 linked
-            if t1 in linkvar1 and t2 in linkvar2:
-                index1 = linkvar1.index(t1)
-                index2 = linkvar2.index(t2)
-                if index1 != index2:
-                    return False
-            # 2 free
-            elif t1 not in linkvar1 and t2 not in linkvar2:
-                if t1 != t2:
-                    return False
-            # no match
-            else:
-                return False
-        # Abstract
-        elif t1.type == TermType.ABSTRACT:
-            linkvar1.append(t1.var)
-            linkvar2.append(t2.var)
-            queue1.append(t1.right)
-            queue2.append(t2.right)
-        # Apply
-        elif t1.type == TermType.APPLY:
-            queue1.append(t1.left)
-            queue1.append(t1.right)
-            queue2.append(t2.left)
-            queue2.append(t2.right)
-
-    if len(queue1) != len(queue2):
-        return False
-    return True
+    
