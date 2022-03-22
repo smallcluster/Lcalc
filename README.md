@@ -1,2 +1,2 @@
 # Lcalc
-A lambda calculus interpretor in python.
+A lambda calculus interpreter in python.
