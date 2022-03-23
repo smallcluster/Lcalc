@@ -11,13 +11,25 @@ class Term:
         self.right = right
         self.type = type
 
-    def reduce_LO(self, verbose=False):
+    def beta_reduce(self, verbose=False):
         t = self
-        while t.can_reduce_LO():
-            t = t.one_step_reduce_LO()
+        while t.can_beta_reduce():
+            t = t.one_step_beta_reduce()
             if verbose:
                 print(f"-> {t}")
         return t
+
+    def eta_reduce(self, verbose=False):
+        t = self
+        while t.can_eta_reduce():
+            t = t.one_step_eta_reduce()
+            if verbose:
+                print(f"-> {t}")
+        return t
+    
+    def reduce(self, verbose=False):
+        t = self.beta_reduce(verbose)
+        return t.eta_reduce(verbose)
 
     def __str__(self) -> str:
         vars = self.get_abstracted_vars()
@@ -93,11 +105,19 @@ class Term:
         pass
     def to_string(self):
         pass
-    def can_reduce_LO(self) -> bool:
+    def can_beta_reduce(self) -> bool:
+        pass
+    def one_step_beta_reduce(self):
+        pass
+    def can_eta_reduce(self) -> bool:
+        pass
+    def one_step_eta_reduce(self):
         pass
     def replace(self, var, term):
         pass
     def get_abstracted_vars(self):
+        pass
+    def is_var_in(self, var):
         pass
     
 class Abstract(Term):
@@ -117,8 +137,8 @@ class Abstract(Term):
             next = next.right
         return f"{txt}.{next.to_string()}"
 
-    def can_reduce_LO(self) -> bool:
-        return self.right.can_reduce_LO()
+    def can_beta_reduce(self) -> bool:
+        return self.right.can_beta_reduce()
 
     def replace(self, var, term):
         if self.var == var:
@@ -127,12 +147,26 @@ class Abstract(Term):
         return Abstract(t.var, t.right.replace(var, term))
 
 
-    def one_step_reduce_LO(self):
+    def one_step_beta_reduce(self):
         t = self.copy()
-        return Abstract(t.var, t.right.one_step_reduce_LO())
+        return Abstract(t.var, t.right.one_step_beta_reduce())
 
     def get_abstracted_vars(self):
         return self.right.get_abstracted_vars()+[self.var]
+
+    def can_eta_reduce(self) -> bool:
+        if self.right.type == TermType.APPLY and self.right.right == self.var and not self.right.left.is_var_in(self.var):
+            return True
+        return self.right.can_eta_reduce()
+    
+    def one_step_eta_reduce(self):
+        if self.right.type == TermType.APPLY and self.right.right == self.var and not self.right.left.is_var_in(self.var):
+            return self.right.left
+        t = self.copy()
+        return Abstract(t.var, t.right.one_step_eta_reduce())
+
+    def is_var_in(self, var):
+        return self.right.is_var_in(var)
 
 class Apply(Term):
     def __init__(self, left, right):
@@ -154,34 +188,38 @@ class Apply(Term):
             return f"{self.left.to_string()} ({self.right.to_string()})"
 
 
-    def can_reduce_LO(self) -> bool:
+    def can_beta_reduce(self) -> bool:
         if self.left.type == TermType.ABSTRACT:
             return True
-        elif self.left.type == TermType.APPLY:
-            LR = self.left.can_reduce_LO()
-            if not LR:
-                return self.right.can_reduce_LO()
-            else:
-                return LR
-        else:
-            return self.right.can_reduce_LO()
+        elif self.left.can_beta_reduce():
+            return True
+        return self.right.can_beta_reduce()
+
+    def can_eta_reduce(self) -> bool:
+        if self.left.can_eta_reduce():
+            return True
+        return self.right.can_eta_reduce()
+
+    def one_step_eta_reduce(self):
+        if self.left.can_eta_reduce():
+            return Apply(self.left.one_step_eta_reduce(), self.right)
+        return Apply(self.left, self.right.one_step_eta_reduce())
 
     def replace(self, var, term):
         return Apply(self.left.replace(var, term), self.right.replace(var, term))
 
-    def one_step_reduce_LO(self):
+    def one_step_beta_reduce(self):
         if self.left.type == TermType.ABSTRACT:
             return self.left.replace(self.left.var, self.right)
-        elif self.left.type == TermType.APPLY:
-            if self.left.can_reduce_LO():
-                return Apply(self.left.one_step_reduce_LO(), self.right)
-            else:
-                return Apply(self.left, self.right.one_step_reduce_LO())
-        else:
-            return Apply(self.left, self.right.one_step_reduce_LO())
+        elif self.left.can_beta_reduce():
+            return Apply(self.left.one_step_beta_reduce(), self.right)
+        return Apply(self.left, self.right.one_step_beta_reduce())
 
     def get_abstracted_vars(self):
         return self.left.get_abstracted_vars() + self.right.get_abstracted_vars()
+
+    def is_var_in(self, var):
+        return self.left.is_var_in(var) or self.right.is_var_in(var)
 
 class Variable(Term):
     def __init__(self, name):
@@ -197,7 +235,10 @@ class Variable(Term):
     def to_string(self):
         return self.name
     
-    def can_reduce_LO(self) -> bool:
+    def can_beta_reduce(self) -> bool:
+        return False
+
+    def can_eta_reduce(self) -> bool:
         return False
 
     def replace(self, var, term):
@@ -205,9 +246,15 @@ class Variable(Term):
             return term.copy()
         return self
 
-    def one_step_reduce_LO(self):
+    def one_step_beta_reduce(self):
+        return self
+
+    def one_step_eta_reduce(self):
         return self
 
     def get_abstracted_vars(self):
         return []
+
+    def is_var_in(self, var):
+        return self == var
     

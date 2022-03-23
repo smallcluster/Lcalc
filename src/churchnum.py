@@ -23,12 +23,18 @@ def get_pred():
     z = term.Variable("z")
     g = term.Variable("g")
     h = term.Variable("h")
+    w = term.Variable("w")
     return term.Abstract(n, term.Abstract(f, term.Abstract(x, term.Apply( term.Apply(term.Apply(n, term.Abstract(g, term.Abstract(h, term.Apply(h, term.Apply(g, f))))), term.Abstract(z, x)) , term.Abstract(u, u)))))
 
 def get_number(t):
     if t.type != term.TermType.ABSTRACT:
         return None
     ab1 = t
+
+    # id =eta 1, check this special case
+    if t.right == t.var:
+        return 1
+
     # second abstract
     if t.right.type != term.TermType.ABSTRACT:
         return None
