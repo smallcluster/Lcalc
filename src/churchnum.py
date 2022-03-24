@@ -26,6 +26,55 @@ def get_pred():
     w = term.Variable("w")
     return term.Abstract(n, term.Abstract(f, term.Abstract(x, term.Apply( term.Apply(term.Apply(n, term.Abstract(g, term.Abstract(h, term.Apply(h, term.Apply(g, f))))), term.Abstract(z, x)) , term.Abstract(u, u)))))
 
+def make_pair(t1, t2):
+    x = term.Variable("x")
+    return term.Abstract(x, term.Apply(term.Apply(x, t1), t2))
+
+def get_proj1():
+    c = term.Variable("c")
+    x = term.Variable("x")
+    y = term.Variable("y")
+    return term.Abstract(c, term.Apply(c, term.Abstract(x, term.Abstract(y, x))))
+
+def get_proj2():
+    c = term.Variable("c")
+    x = term.Variable("x")
+    y = term.Variable("y")
+    return term.Abstract(c, term.Apply(c, term.Abstract(x, term.Abstract(y, y))))
+
+def get_pred_pair():
+    n = term.Variable("n")
+    c = term.Variable("c")
+    return term.Abstract(n, \
+        term.Apply( \
+            get_proj1(), \
+            term.Apply( \
+                term.Apply( \
+                        n, \
+                        term.Abstract(c, \
+                            make_pair( \
+                                term.Apply( \
+                                    get_proj2(), \
+                                    c \
+                                ), \
+                                term.Apply( \
+                                    get_succ(), \
+                                    term.Apply( \
+                                        get_proj2(), \
+                                        c\
+                                    )\
+                                )\
+                            )\
+                        )\
+                ), \
+                make_pair(\
+                    gen_number(0), \
+                    gen_number(0)\
+                )\
+            ) \
+        )\
+    )
+
 def get_number(t):
     if t.type != term.TermType.ABSTRACT:
         return None
