@@ -13,23 +13,28 @@ class Term:
 
     def beta_reduce(self, verbose=False):
         t = self
+        n = 0
         while t.can_beta_reduce():
             t = t.one_step_beta_reduce()
+            n += 1
             if verbose:
-                print(f"-> {t}")
-        return t
+                print(f"{n} -> {t}")
+        return (t, n)
 
     def eta_reduce(self, verbose=False):
         t = self
+        n = 0
         while t.can_eta_reduce():
             t = t.one_step_eta_reduce()
+            n += 1
             if verbose:
-                print(f"-> {t}")
-        return t
+                print(f"{n} -> {t}")
+        return (t, n)
     
     def reduce(self, verbose=False):
-        t = self.beta_reduce(verbose)
-        return t.eta_reduce(verbose)
+        t, nb = self.beta_reduce(verbose)
+        t, ne = t.eta_reduce(verbose)
+        return (t, nb+ne)
 
     def __str__(self) -> str:
         vars = self.get_abstracted_vars()
