@@ -1,5 +1,6 @@
 from unicodedata import digit
 from pyparsing import Regex
+from symtable import Symtable
 
 # READERS
 class Reader:
@@ -25,7 +26,7 @@ class StringReader(Reader):
     def is_eof(self) -> bool:
         return self.pos >= len(self.string)
 
-# Tokens
+# TOKENS
 class Token:
     def __init__(self, name, value) -> None:
         self.name = name
@@ -36,9 +37,7 @@ class Token:
             return self.name == __o.name
         else:
             raise TypeError(f"{self.name}: Token -> __eq__ -> object __o not inst of Token")
-class Symtable:
-    def __init__(self) -> None:
-        self.tokens = []
+
 class Lexer:
     def __init__(self, reader: Reader, symtable: Symtable) -> None:
         self.reader: Reader = reader
