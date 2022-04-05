@@ -63,7 +63,6 @@ class Lexer:
                 # EOF
                 if self.reader.is_eof():
                     return Token("EOF", None)
-
                 c = self.reader.read_char()
                 if c == ' ':
                     continue
@@ -76,6 +75,8 @@ class Lexer:
                     self.buffer = c
                 elif c == ':':
                     self.state = 3
+                elif c == "\u03BB" or c == "\\":
+                    self.state = 6
                 elif c.isalpha() or c == '_':
                     self.state = 4
                     self.buffer = c
@@ -130,15 +131,15 @@ class Lexer:
                     return Token(self.buffer, None)
             # SYNTAX
             elif self.state == 5:
-                if c in "()\.;":
-                    if c == '\\':
-                        return Token("LAMBDA", c)
-                    else:
-                        return Token(c, None)
+                if c in "().;":
+                    return Token(c, None)
                 else:
                     # error
                     self.state = -1
                     self.buffer = c
+            # LAMBDA
+            elif self.state == 6:
+                return Token("LAMBDA", c)
             else:
                 raise ValueError(f"Unknown char sequence '{self.buffer}' at {self.line_no}")
 class Parser:
