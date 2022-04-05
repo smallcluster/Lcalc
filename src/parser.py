@@ -1,5 +1,3 @@
-from unicodedata import digit
-from pyparsing import Regex
 from symtable import Symtable
 
 # READERS
@@ -8,12 +6,11 @@ class Reader:
         self.pos = 0
     def read_char(self) -> chr:
         self.pos += 1
-    def get_pos(self):
+    def get_pos(self) -> int:
         return self.pos
-    def set_pos(self, pos):
+    def set_pos(self, pos) -> None:
         self.pos = pos
-
-    def is_eof(self):
+    def is_eof(self) -> bool:
         pass
 class StringReader(Reader):
     def __init__(self, string) -> None:
@@ -32,9 +29,18 @@ class Token:
         self.name = name
         self.value = value
 
+    def __str__(self) -> str:
+        return f"({self.name}, {self.value})"
+
     def __eq__(self, __o: object) -> bool:
         if isinstance(__o, Token):
             return self.name == __o.name
+        else:
+            raise TypeError(f"{self.name}: Token -> __eq__ -> object __o not inst of Token")
+    
+    def __ne__(self, __o: object) -> bool:
+        if isinstance(__o, Token):
+            return self.name != __o.name
         else:
             raise TypeError(f"{self.name}: Token -> __eq__ -> object __o not inst of Token")
 
@@ -48,7 +54,7 @@ class Lexer:
 
         self.digits = [str(i) for i in range(10)]
 
-    def get_next_token(self):
+    def get_next_token(self) -> Token:
         self.state = 0
         self.buffer = ""
         while True:
@@ -125,7 +131,13 @@ class Lexer:
                 raise ValueError(f"Unknown char sequence '{self.buffer}' at {self.line_no}")
 class Parser:
     def __init__(self, symtable: Symtable) -> None:
-        self.symtable = symtable
+        self.symtable: Symtable = symtable
+        self.EOF = Token("EOF", None)
 
-    def parse(self, reader: Reader):
+    def parse(self, reader: Reader) -> None:
         lexer = Lexer(reader, self.symtable)
+        T = lexer.get_next_token()
+        while T != self.EOF :
+            print(str(T))
+            T = lexer.get_next_token()
+        
