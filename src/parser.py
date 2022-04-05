@@ -1,9 +1,21 @@
-from enum import Enum
+# READERS
+class Reader:
+    def __init__(self) -> None:
+        pass
+class StringReader(Reader):
+    def __init__(self) -> None:
+        super().__init__()
+class FileReader(Reader):
+    def __init__(self) -> None:
+        super().__init__()
 
-class Automata:
+class Symtable:
+    def __init__(self) -> None:
+        pass
+class Lexer:
     def __init__(self) -> None:
         pass
 
-class State:
-    def __init__(self, accept) -> None:
-        self.accept = accept
+class Parser:
+    def __init__(self) -> None:
+        pass
