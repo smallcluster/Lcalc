@@ -131,7 +131,10 @@ class Lexer:
             # SYNTAX
             elif self.state == 5:
                 if c in "()\.;":
-                    return Token(c, None)
+                    if c == '\\':
+                        return Token("LAMBDA", c)
+                    else:
+                        return Token(c, None)
                 else:
                     # error
                     self.state = -1
