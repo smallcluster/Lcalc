@@ -1,4 +1,4 @@
-from symtable import Symtable
+from symbtable import Symbtable
 
 # READERS
 class Reader:
@@ -30,7 +30,7 @@ class Token:
         self.value = value
 
     def __str__(self) -> str:
-        return f"({self.name}, {self.value})"
+        return f"( \"{self.name}\" , {self.value} )"
 
     def __eq__(self, __o: object) -> bool:
         if isinstance(__o, Token):
@@ -45,12 +45,12 @@ class Token:
             raise TypeError(f"{self.name}: Token -> __eq__ -> object __o not inst of Token")
 
 class Lexer:
-    def __init__(self, reader: Reader, symtable: Symtable) -> None:
+    def __init__(self, reader: Reader, symbtable: Symbtable) -> None:
         self.reader: Reader = reader
         self.state = 0
         self.line_no = 1
         self.buffer = ""
-        self.symtable = symtable
+        self.symbtable = symbtable
 
         self.digits = [str(i) for i in range(10)]
 
@@ -58,13 +58,16 @@ class Lexer:
         self.state = 0
         self.buffer = ""
         while True:
-            # end of file
-            if self.reader.is_eof():
-                return Token("EOF", None)
-            # init state
+            # INITIAL STATE
             if self.state == 0:
+                # EOF
+                if self.reader.is_eof():
+                    return Token("EOF", None)
+
                 c = self.reader.read_char()
-                if c == '\n':
+                if c == ' ':
+                    continue
+                elif c == '\n':
                     self.line_no +=1
                 elif c == '#':
                     self.state = 1
@@ -78,7 +81,7 @@ class Lexer:
                     self.buffer = c
                 else:
                     self.state = 5
-            # comments
+            # COMMENTS
             elif self.state == 1:
                 if not self.reader.is_eof():
                     c = self.reader.read_char()
@@ -87,7 +90,7 @@ class Lexer:
                 if c == '\n':
                     self.line_no += 1
                     self.state = 0
-            # Natural number
+            # NATURAL NUMBERS
             elif self.state == 2:
                 if not self.reader.is_eof():
                     c = self.reader.read_char()
@@ -95,7 +98,8 @@ class Lexer:
                         self.reader.set_pos(self.reader.get_pos()-1) # go back one
                         T = Token(self.buffer, int(self.buffer))
                         return T
-                    self.buffer += c
+                    else:
+                        self.buffer += c
                 else:
                     return Token(self.buffer, int(self.buffer))
             # ASSIGN
@@ -104,40 +108,44 @@ class Lexer:
                     c = self.reader.read_char()
                     if c == '=':
                         return Token("ASSIGN", ":=")
+                    else:
+                        # error
+                        self.state = -1
+                        self.buffer = ":"+c
+                else:
                     # error
                     self.state = -1
-                    self.buffer = ":"+c
-                # error
-                self.state = -1
-                self.buffer = c+"EOF"
+                    self.buffer = c+"EOF"
             # KEYWORD
             elif self.state == 4:
                 if not self.reader.is_eof():
                     c = self.reader.read_char()
-                    if c not in digit and not c.isalpha() and c != '_':
+                    if c not in self.digits and not c.isalpha() and c != '_':
                         self.reader.set_pos(self.reader.get_pos()-1) # go back one
                         T = Token(self.buffer, None)
                         return T
+                    else:
+                        self.buffer += c
                 else:
                     return Token(self.buffer, None)
             # SYNTAX
             elif self.state == 5:
                 if c in "()\.;":
                     return Token(c, None)
-                # error
-                self.state = -1
-                self.buffer = c
+                else:
+                    # error
+                    self.state = -1
+                    self.buffer = c
             else:
                 raise ValueError(f"Unknown char sequence '{self.buffer}' at {self.line_no}")
 class Parser:
-    def __init__(self, symtable: Symtable) -> None:
-        self.symtable: Symtable = symtable
+    def __init__(self, symbtable: Symbtable) -> None:
+        self.symbtable: Symbtable = symbtable
         self.EOF = Token("EOF", None)
 
     def parse(self, reader: Reader) -> None:
-        lexer = Lexer(reader, self.symtable)
+        lexer = Lexer(reader, self.symbtable)
         T = lexer.get_next_token()
         while T != self.EOF :
             print(str(T))
             T = lexer.get_next_token()
-        
