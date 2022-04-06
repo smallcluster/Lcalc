@@ -259,8 +259,11 @@ class Parser:
                     vars.append(term.Variable(self.token.name))
                     self.match(self.token)
                 self.match(Token(".", None))
+                context = context+vars
+                # keep only the last occurence of duplicate variables
+                context = list({v.name:v for v in context}.values())
                 # get abstracted term
-                t = self.T(context+vars)
+                t = self.T(context)
                 # construct abstraction chain
                 vars.reverse()
                 for v in vars:
