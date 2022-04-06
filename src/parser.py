@@ -165,7 +165,8 @@ class Parser:
                 if t.type == term.TermType.VARIABLE:
                     tok = Token(t.name, None, "NAME")
                     if self.symbtable.is_token_in(tok):
-                        print(str(self.symbtable.get(tok).value))
+                        index = self.symbtable.index(tok)
+                        print(str(self.symbtable.get(index).value))
                     else:
                         print(str(t))
                 else:
@@ -174,60 +175,76 @@ class Parser:
             # Name := R
             else:
                 var_id = self.token_id
-                self.next_token()
+                self.match(self.token)
                 self.match(Token("ASSIGN", None))
                 t = self.R()
                 # update variable value
-                self.symbtable.get(self.token_id).value = t
+                self.symbtable.get(var_id).value = t
         else:
             raise ValueError(f"Language keyword or variable name expected, got {self.token}.")
 
     # reductions
     # breduce T | ereduce T | breducev T | ereducev T | T
     def R(self) -> Token:
+        context = []
         if self.token == Token("breduce", None, "NAME"):
             self.match(self.token)
-            t = self.T()
+            t = self.T(context)
             t,n = t.beta_reduce()
             return t
         elif self.token == Token("breducev", None, "NAME"):
             self.match(self.token)
-            t = self.T()
+            t = self.T(context)
             t,n = t.beta_reduce(True)
             return t
         elif self.token == Token("ereduce", None, "NAME"):
             self.match(self.token)
-            t = self.T()
+            t = self.T(context)
             t,n = t.eta_reduce()
             return t
         elif self.token == Token("ereducev", None, "NAME"):
             self.match(self.token)
-            t = self.T()
+            t = self.T(context)
             t,n = t.eta_reduce(True)
             return t
         else:
-            return self.T()
+            return self.T(context)
 
     # OP Apply 
     # T -> E {("E")*}
-    def T(self) -> term.Term:
-        e = self.E()
+    def T(self, context) -> term.Term:
+        context = context[:]
+        e = self.E(context)
         while self.token == Token("(", None) or self.token.type == "NAME" or self.token.type == "NUMBER":
-            e = term.Apply(e, self.E())
+            e = term.Apply(e, self.E(context))
         return e
 
 
     # E -> (T) | Name | Num | \ {("Name")+} . T
-    def E(self) -> term.Term:
+    def E(self, context) -> term.Term:
+        context = context[:]
         if self.token == Token("(", None):
             self.match(self.token)
-            t = self.T()
+            t = self.T(context)
             self.match(Token(")", None))
             return t
         elif self.token.type == "NAME":
-            var = term.Variable(self.token.name)
-            self.match(self.token)
-            return var
+            # if var is in the context
+            for v in context:
+                if v.name == self.token.name:
+                    self.match(self.token)
+                    return v
+            # if var is a declared free variable -> replace graph
+            if self.symbtable.is_token_in(self.token):
+                t = self.symbtable.get(self.symbtable.index(self.token)).value
+                if t != None:
+                    self.match(self.token)
+                    return t
+                else:
+                    # var isn't defined -> error
+                    raise ValueError(f"Free variable {self.token.name} is not defined.")
+            # var isn't defined -> error
+            raise ValueError(f"Free variable {self.token.name} is not defined.")
         elif self.token.type == "NUMBER":
             n = church.gen_number(self.token.value)
             self.match(self.token)
@@ -243,7 +260,7 @@ class Parser:
                     self.match(self.token)
                 self.match(Token(".", None))
                 # get abstracted term
-                t = self.T() # TODO: handle linked variable context
+                t = self.T(context+vars)
                 # construct abstraction chain
                 vars.reverse()
                 for v in vars:
