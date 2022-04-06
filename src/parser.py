@@ -1,5 +1,7 @@
+from tkinter.messagebox import NO
 import term
 import churchnum as church
+import os
 
 class Token:
     def __init__(self, name: str, value, type: str = None) -> None:
@@ -43,6 +45,25 @@ class StringReader(Reader):
     def is_eof(self) -> bool:
         return self.pos >= len(self.string)
 
+class FileReader(Reader):
+    def __init__(self, file) -> None:
+        super().__init__()
+        self.file = file
+    
+    def read_char(self) -> chr:
+        c = self.file.read(1)
+        super().read_char()
+        return c
+    
+    def set_pos(self, pos: int) -> None:
+        self.file.seek(pos)
+        super().set_pos(pos)
+    
+    def is_eof(self) -> bool:
+        c = self.file.read(1)
+        self.file.seek(self.pos)
+        return c == ""
+
 class Lexer:
     def __init__(self, reader: Reader) -> None:
         self.reader: Reader = reader
@@ -77,6 +98,8 @@ class Lexer:
                 elif c.isalpha() or c == '_':
                     self.state = 4
                     self.buffer = c
+                elif c == '"':
+                    self.state = 7
                 else:
                     self.state = 5
             # COMMENTS
@@ -135,38 +158,53 @@ class Lexer:
             # LAMBDA
             elif self.state == 6:
                 return Token("LAMBDA", None)
+            # PATH
+            elif self.state == 7:
+                if not self.reader.is_eof():
+                    c = self.reader.read_char()
+                    if c == '"':
+                        return Token(self.buffer, self.buffer, "PATH")
+                    else:
+                        self.buffer += c
+                else:
+                    raise ValueError(f"Path is malformed : {self.buffer}")
             else:
                 raise ValueError(f"Unknown char sequence '{self.buffer}' at {self.line_no}")
 class Parser:
-    def __init__(self) -> None:
+    def __init__(self, free_vars: dict = dict()) -> None:
         self.lexer : Lexer = None
         self.EOF = Token("EOF", None)
         self.token = None
-        self.free_vars = dict()  # {name:term}
+        self.free_vars = free_vars  # {name:term}
     def match(self, token : Token) -> None:
         if token == self.token:
             self.token = self.lexer.next_token()
         else:
             raise ValueError(f"Token {token} expected, got {self.token}")
+        
 
     def parse(self, reader: Reader) -> None:
         self.lexer = Lexer(reader)
+        self.token = self.lexer.next_token()
         self.L()
 
-    # L -> I;L | EOF
+    # L -> I; L | EOF
     def L(self) -> None:
-        self.token = self.lexer.next_token()
         if self.token != self.EOF:
             # instruction
             self.I()
             self.match(Token(";", None))
             self.L()
-    # I -> Name := R | print R | R
+    # I -> listall | Name := R | print R | import path
     def I(self) -> None:
         if self.token.type == "NAME":
             # --built in keywords
+            if self.token == Token("listall", None, "NAME"):
+                self.match(self.token)
+                for k in self.free_vars:
+                    print(f"{k} -> {self.free_vars[k]}")
             # print R
-            if self.token == Token("print", None, "Name"):
+            elif self.token == Token("print", None, "NAME"):
                 self.match(self.token)
                 t = self.R()
                 if church.is_number(t):
@@ -176,6 +214,19 @@ class Parser:
                     print(str(self.free_vars[t.name]))
                 else:
                     print(str(t))
+            # import "path"
+            elif self.token == Token("import", None, "NAME"):
+                self.match(self.token)
+                if self.token.type != "PATH":
+                    raise ValueError(f"Expected a path name, got {self.token}")
+                path = self.token.value
+                self.match(self.token)
+                # check if file exist
+                if not os.path.exists(path):
+                    raise ValueError(f"File {path} do not exist.")
+                # parse file content
+                with open(path, "r") as f:
+                    Parser(self.free_vars).parse(FileReader(f))
             # variable assignation
             # Name := R
             else:

@@ -1,0 +1,3 @@
+succ := \n f x. f(n f x);
+exp := \n m. m n;
+id := \x.x;
