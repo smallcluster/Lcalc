@@ -54,15 +54,15 @@ class Lexer:
 
         self.digits = [str(i) for i in range(10)]
 
-    def get_next_token(self) -> Token:
+    def next_token(self) -> int:
         self.state = 0
         self.buffer = ""
-        while True:
+        while True :
             # INITIAL STATE
             if self.state == 0:
                 # EOF
                 if self.reader.is_eof():
-                    return Token("EOF", None)
+                    return self.symbtable.add(Token("EOF", None))
                 c = self.reader.read_char()
                 if c == ' ':
                     continue
@@ -87,7 +87,7 @@ class Lexer:
                 if not self.reader.is_eof():
                     c = self.reader.read_char()
                 else:
-                    return Token("EOF", None)
+                    return self.symbtable.add(Token("EOF", None))
                 if c == '\n':
                     self.line_no += 1
                     self.state = 0
@@ -97,18 +97,18 @@ class Lexer:
                     c = self.reader.read_char()
                     if c not in self.digits:
                         self.reader.set_pos(self.reader.get_pos()-1) # go back one
-                        T = Token(self.buffer, int(self.buffer))
+                        T = self.symbtable.add(Token(self.buffer, int(self.buffer)))
                         return T
                     else:
                         self.buffer += c
                 else:
-                    return Token(self.buffer, int(self.buffer))
+                    return self.symbtable.add(Token(self.buffer, int(self.buffer)))
             # ASSIGN
             elif self.state == 3:
                 if not self.reader.is_eof():
                     c = self.reader.read_char()
                     if c == '=':
-                        return Token("ASSIGN", ":=")
+                        return self.symbtable.add(Token("ASSIGN", ":="))
                     else:
                         # error
                         self.state = -1
@@ -123,23 +123,23 @@ class Lexer:
                     c = self.reader.read_char()
                     if c not in self.digits and not c.isalpha() and c != '_':
                         self.reader.set_pos(self.reader.get_pos()-1) # go back one
-                        T = Token(self.buffer, None)
+                        T = self.symbtable.add(Token(self.buffer, None))
                         return T
                     else:
                         self.buffer += c
                 else:
-                    return Token(self.buffer, None)
+                    return self.symbtable.add(Token(self.buffer, None))
             # SYNTAX
             elif self.state == 5:
                 if c in "().;":
-                    return Token(c, None)
+                    return self.symbtable.add(Token(c, None))
                 else:
                     # error
                     self.state = -1
                     self.buffer = c
             # LAMBDA
             elif self.state == 6:
-                return Token("LAMBDA", c)
+                return self.symbtable.add(Token("LAMBDA", c))
             else:
                 raise ValueError(f"Unknown char sequence '{self.buffer}' at {self.line_no}")
 class Parser:
@@ -149,7 +149,7 @@ class Parser:
 
     def parse(self, reader: Reader) -> None:
         lexer = Lexer(reader, self.symbtable)
-        T = lexer.get_next_token()
+        T = self.symbtable.get(lexer.next_token())
         while T != self.EOF :
             print(str(T))
-            T = lexer.get_next_token()
+            T = self.symbtable.get(lexer.next_token())
