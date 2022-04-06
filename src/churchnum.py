@@ -80,9 +80,10 @@ def get_number(t):
         return None
     ab1 = t
 
+    # ARCHIVE ONLY
     # id =eta 1, check this special case
-    if t.right == t.var:
-        return 1
+    #if t.right == t.var:
+    #    return 1
 
     # second abstract
     if t.right.type != term.TermType.ABSTRACT:

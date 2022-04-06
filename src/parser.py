@@ -176,6 +176,12 @@ class Parser:
         self.EOF = Token("EOF", None)
         self.token = None
         self.free_vars = free_vars  # {name:term}
+
+    def listall(self):
+        for k in self.free_vars:
+            print(f"{k} -> {self.free_vars[k]}")
+
+
     def match(self, token : Token) -> None:
         if token == self.token:
             self.token = self.lexer.next_token()
@@ -195,16 +201,13 @@ class Parser:
             self.I()
             self.match(Token(";", None))
             self.L()
-    # I -> listall | Name := R | print R | import path
+    # I -> Name := R | print R | import path
     def I(self) -> None:
         if self.token.type == "NAME":
             # --built in keywords
-            if self.token == Token("listall", None, "NAME"):
-                self.match(self.token)
-                for k in self.free_vars:
-                    print(f"{k} -> {self.free_vars[k]}")
+            
             # print R
-            elif self.token == Token("print", None, "NAME"):
+            if self.token == Token("print", None, "NAME"):
                 self.match(self.token)
                 t = self.R()
                 if church.is_number(t):

@@ -32,6 +32,8 @@ if __name__ == "__main__":
                 break
             if line.replace(" ", "") == "clear":
                 clear()
+            elif line.replace(" ", "") == "listall":
+                P.listall()
             elif line.endswith(";"):
                 buffer += line
                 try:
