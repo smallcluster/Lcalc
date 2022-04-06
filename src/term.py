@@ -136,7 +136,7 @@ class Abstract(Term):
         return Abstract(var, self.right.replace(self.var, var))
 
     def to_string(self) -> str:
-        txt = f"${self.var}"
+        txt = '\u03BB'+str(self.var)
         next = self.right
         while next.type == TermType.ABSTRACT:
             txt += f" {next.var}"
