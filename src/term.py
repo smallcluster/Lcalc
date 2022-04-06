@@ -38,6 +38,7 @@ class Term:
 
     def __str__(self) -> str:
         vars = self.get_abstracted_vars()
+        vars.reverse()
         names = {x.name for x in vars}
         d = {n:[] for n in names}
         for v in vars :

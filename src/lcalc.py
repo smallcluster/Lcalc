@@ -1,17 +1,12 @@
 import sys
 import os
-
-from symbtable import Symbtable
 from parser import Parser, StringReader
-
 
 
 if __name__ == "__main__":
     sys.setrecursionlimit(10**9)
     clear = lambda : os.system('cls' if os.name=='nt' else 'clear')
-
-    S = Symbtable()
-    P = Parser(S)
+    P = Parser()
     print("Lcalc v0.1, JAFFUER Pierre")
     print("Type 'exit' to quit, 'clear' to clear console.")
     line = ""
