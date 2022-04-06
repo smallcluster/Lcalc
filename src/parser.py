@@ -185,8 +185,7 @@ class Parser:
     def listall(self):
         for k in self.free_vars:
             print(f"{k} -> {self.free_vars[k]}")
-
-
+            
     def match(self, token : Token) -> None:
         if token == self.token:
             self.token = self.lexer.next_token()
