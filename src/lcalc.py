@@ -14,20 +14,20 @@ if __name__ == "__main__":
     P = Parser(S)
     print("Lcalc v0.1, JAFFUER Pierre")
     print("Type 'exit' to quit, 'clear' to clear console.")
-    print()
     line = ""
     buffer = ""
     new_input = True
     while True:
         if new_input:
+            print()
             line = input("> ")
             if line != "clear":
                 new_input = False
         else:
             line = input("... ")
-        if line == "exit":
+        if line.replace(" ", "") == "exit":
             break
-        if line == "clear":
+        if line.replace(" ", "") == "clear":
             clear()
         elif line.endswith(";"):
             buffer += line
