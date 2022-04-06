@@ -1,0 +1,5 @@
+succ := \n f x. f(n f x);
+pred := \n f x. n (\g h. h (g f)) (\u.x) (\z.z); # pred de Kleene
+exp := \n m. m n;
+add := \n m f x. n f (m f x);
+mult := \n m f. n (m f);
