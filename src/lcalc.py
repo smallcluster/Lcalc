@@ -15,7 +15,7 @@ if __name__ == "__main__":
             P.parse(FileReader(f))
     else:
         # Interactive interpreter
-        print("Lcalc v0.1, JAFFUER Pierre")
+        print("Lcalc v1.0, JAFFUER Pierre")
         print("Type 'exit' to quit, 'clear' to clear console.")
         line = ""
         buffer = ""
