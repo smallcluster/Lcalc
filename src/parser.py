@@ -1,4 +1,5 @@
 from symbtable import Symbtable
+import term
 
 # READERS
 class Reader:
@@ -8,12 +9,12 @@ class Reader:
         self.pos += 1
     def get_pos(self) -> int:
         return self.pos
-    def set_pos(self, pos) -> None:
+    def set_pos(self, pos:int) -> None:
         self.pos = pos
     def is_eof(self) -> bool:
         pass
 class StringReader(Reader):
-    def __init__(self, string) -> None:
+    def __init__(self, string:str) -> None:
         super().__init__()
         self.string : str = string
     def read_char(self) -> chr:
@@ -25,7 +26,7 @@ class StringReader(Reader):
 
 # TOKENS
 class Token:
-    def __init__(self, name, value) -> None:
+    def __init__(self, name: str, value) -> None:
         self.name = name
         self.value = value
 
@@ -35,14 +36,12 @@ class Token:
     def __eq__(self, __o: object) -> bool:
         if isinstance(__o, Token):
             return self.name == __o.name
-        else:
-            raise TypeError(f"{self.name}: Token -> __eq__ -> object __o not inst of Token")
+        return False
     
     def __ne__(self, __o: object) -> bool:
         if isinstance(__o, Token):
             return self.name != __o.name
-        else:
-            raise TypeError(f"{self.name}: Token -> __eq__ -> object __o not inst of Token")
+        return False
 
 class Lexer:
     def __init__(self, reader: Reader, symbtable: Symbtable) -> None:
@@ -123,7 +122,7 @@ class Lexer:
                     c = self.reader.read_char()
                     if c not in self.digits and not c.isalpha() and c != '_':
                         self.reader.set_pos(self.reader.get_pos()-1) # go back one
-                        T = self.symbtable.add(Token(self.buffer, None))
+                        T = self.symbtable.add(Token(self.buffer, "NAME"))
                         return T
                     else:
                         self.buffer += c
@@ -139,17 +138,99 @@ class Lexer:
                     self.buffer = c
             # LAMBDA
             elif self.state == 6:
-                return self.symbtable.add(Token("LAMBDA", c))
+                return self.symbtable.add(Token("LAMBDA", None))
             else:
                 raise ValueError(f"Unknown char sequence '{self.buffer}' at {self.line_no}")
 class Parser:
-    def __init__(self, symbtable: Symbtable) -> None:
+    def __init__(self, lexer: Lexer, symbtable: Symbtable) -> None:
         self.symbtable: Symbtable = symbtable
+        self.lexer = lexer
         self.EOF = Token("EOF", None)
 
-    def parse(self, reader: Reader) -> None:
-        lexer = Lexer(reader, self.symbtable)
-        T = self.symbtable.get(lexer.next_token())
-        while T != self.EOF :
-            print(str(T))
-            T = self.symbtable.get(lexer.next_token())
+        self.token, self.token_id = None, None
+
+    def next_token(self) -> None:
+        self.token_id = self.lexer.next_token()
+        self.token = self.symbtable.get(self.token_id)
+
+    def match(self, token : Token) -> None:
+        if token == self.token:
+            self.next_token()
+        else:
+            raise ValueError(f"Token {token} expected, got {self.token}")
+
+    def parse(self) -> None:
+        self.L()
+
+    # L -> I;L | EOF
+    def L(self) -> None:
+        self.next_token()
+        if self.token != self.EOF:
+            # instruction
+            self.I()
+            self.match(Token(";", None))
+            self.L()
+    # I -> Name := T | print T
+    def I(self) -> None:
+        if self.token.value == "NAME":
+            # --built in keywords
+            # print T
+            if self.token == Token("print", "NAME"):
+                self.match(self.token)
+                t = self.T()
+                print(str(t))
+            # variable assignation
+            # Name := T
+            else:
+                var_id = self.token_id
+                self.next_token()
+                self.match(Token(":=", None))
+                t = self.T()
+                # update variable value
+                self.symbtable.get(self.token_id).value = t
+        else:
+            raise ValueError(f"Language keyword or variable name expected, got {self.token}.")
+
+    # OP Apply 
+    # T -> E {("E")*}
+    def T(self) -> term.Term:
+        e = self.E()
+        while self.token == Token("(", None) or self.token.value == "NAME":
+            e = term.Apply(e, self.E())
+        return e
+
+
+    # E -> (T) | Name | \ {("Name")+} . T
+    def E(self) -> term.Term:
+        if self.token == Token("(", None):
+            self.match(self.token)
+            t = self.T()
+            self.match(Token(")", None))
+            return t
+        elif self.token.value == "NAME":
+            var = term.Variable(self.token.name)
+            self.match(self.token)
+            return var
+        elif self.token == Token("LAMBDA", None):
+            self.match(self.token)
+            if self.token.value == "NAME":
+                # get list of vars
+                vars = [term.Variable(self.token.name)]
+                self.match(self.token)
+                while self.token.value == "NAME":
+                    vars.append(term.Variable(self.token.name))
+                    self.match(self.token)
+                self.match(Token(".", None))
+                # get abstracted term
+                t = self.T() # TODO: handle linked variable context
+                # construct abstraction chain
+                for v in vars.reverse():
+                    t = term.Abstract(v, t)
+                return t
+        else:
+            raise ValueError(f"Unknown term structure, got {self.token}")
+
+
+
+            
+
