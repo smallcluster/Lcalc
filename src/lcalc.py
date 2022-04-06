@@ -24,13 +24,12 @@ if __name__ == "__main__":
             if new_input:
                 print()
                 line = input("> ")
-                if line != "clear":
-                    new_input = False
             else:
                 line = input("... ")
+
             if line.replace(" ", "") == "exit":
                 break
-            if line.replace(" ", "") == "clear":
+            elif line.replace(" ", "") == "clear":
                 clear()
             elif line.replace(" ", "") == "listall":
                 P.listall()
@@ -44,6 +43,7 @@ if __name__ == "__main__":
                 new_input = True
             else:
                 buffer += line
+                new_input = False
 
 
         
