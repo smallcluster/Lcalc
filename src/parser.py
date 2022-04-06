@@ -160,7 +160,6 @@ class Parser:
             if self.token == Token("print", None, "Name"):
                 self.match(self.token)
                 t = self.R()
-
                 # if the term is a free variable already defined, print it's tree
                 if t.type == term.TermType.VARIABLE:
                     tok = Token(t.name, None, "NAME")
@@ -234,19 +233,18 @@ class Parser:
                 if v.name == self.token.name:
                     self.match(self.token)
                     return v
-            # if var is a declared free variable -> replace graph
-            if self.symbtable.is_token_in(self.token):
+            # if var is a declared free variable -> capture value
+            if self.token.value != None:
                 t = self.symbtable.get(self.symbtable.index(self.token)).value
-                if t != None:
-                    self.match(self.token)
-                    return t
-                else:
-                    # var isn't defined -> error
-                    raise ValueError(f"Free variable {self.token.name} is not defined.")
-            # var isn't defined -> error
-            raise ValueError(f"Free variable {self.token.name} is not defined.")
+                self.match(self.token)
+                return t
+            else:
+                # remove symbol from the symbtable (useless var)
+                self.symbtable.remove(self.token)
+                raise ValueError(f"Free variable {self.token.name} is not defined.")
         elif self.token.type == "NUMBER":
             n = church.gen_number(self.token.value)
+            self.symbtable.remove(self.token) # do not cache numbers
             self.match(self.token)
             return n
         elif self.token == Token("LAMBDA", None):
@@ -254,9 +252,13 @@ class Parser:
             if self.token.type == "NAME":
                 # get list of vars
                 vars = [term.Variable(self.token.name)]
+                # do not store symbole for abstracted variables (useless)
+                self.symbtable.remove(self.token)
                 self.match(self.token)
                 while self.token.type == "NAME":
                     vars.append(term.Variable(self.token.name))
+                    # do not store symbole for abstracted variables (useless)
+                    self.symbtable.remove(self.token)
                     self.match(self.token)
                 self.match(Token(".", None))
                 context = context+vars

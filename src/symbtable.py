@@ -37,3 +37,6 @@ class Symbtable:
 
     def index(self, token : Token) -> int:
         return self.tokens.index(token)
+
+    def remove(self, token: Token):
+        self.tokens.remove(token)
