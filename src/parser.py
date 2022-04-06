@@ -1,3 +1,5 @@
+import sys
+from tabnanny import verbose
 from tkinter.messagebox import NO
 import term
 import churchnum as church
@@ -176,6 +178,9 @@ class Parser:
         self.EOF = Token("EOF", None)
         self.token = None
         self.free_vars = free_vars  # {name:term}
+        self.verbose = False
+        self.reduce_beta = True
+        self.reduce_eta = False
 
     def listall(self):
         for k in self.free_vars:
@@ -201,15 +206,62 @@ class Parser:
             self.I()
             self.match(Token(";", None))
             self.L()
-    # I -> Name := R | print R | import path
+    # I -> clear| exit | listall | verbose | quiet | reduce {("both"|"beta"|"eta")} | import path | print T | Name := T 
     def I(self) -> None:
         if self.token.type == "NAME":
             # --built in keywords
-            
-            # print R
-            if self.token == Token("print", None, "NAME"):
+            # clear
+            if self.token == Token("clear", None, "NAME"):
                 self.match(self.token)
-                t = self.R()
+                os.system('cls' if os.name=='nt' else 'clear')
+            # exit
+            elif self.token == Token("exit", None, "NAME"):
+                self.match(self.token)
+                sys.exit()
+            # listall
+            elif self.token == Token("listall", None, "NAME"):
+                self.match(self.token)
+                self.listall()
+            # verbose
+            elif self.token == Token("verbose", None, "NAME"):
+                self.match(self.token)
+                self.verbose = True
+            # quiet
+            elif self.token == Token("quiet", None, "NAME"):
+                self.match(self.token)
+                self.verbose = False
+            #reduce
+            elif self.token == Token("reduce", None, "NAME"):
+                self.match(self.token)
+                # reduce beta
+                if self.token == Token("beta", None, "NAME"):
+                    self.match(self.token)
+                    self.reduce_beta = True
+                    self.reduce_eta = False
+                # reduce eta
+                elif self.token == Token("eta", None, "NAME"):
+                    self.match(self.token)
+                    self.reduce_eta = True
+                    self.reduce_beta = False
+                # reduce both
+                elif self.token == Token("both", None, "NAME"):
+                    self.match(self.token)
+                    self.reduce_eta = True
+                    self.reduce_beta = True
+                else:
+                    raise ValueError(f"reduce expects 'beta' (default), 'eta' or 'both'. Got {self.token.name}.")
+            # print T
+            elif self.token == Token("print", None, "NAME"):
+                self.match(self.token)
+                t = self.T([])
+                #eval
+                if self.reduce_beta and self.reduce_eta:
+                    t, n = t.reduce(self.verbose)
+                elif self.reduce_beta:
+                    t, n = t.beta_reduce(self.verbose)
+                elif self.reduce_eta:
+                    t, n = t.eta_reduce(self.verbose)
+
                 if church.is_number(t):
                     print(church.get_number(t))
                 # if the term is a free variable already defined, print it's tree
@@ -231,43 +283,23 @@ class Parser:
                 with open(path, "r") as f:
                     Parser(self.free_vars).parse(FileReader(f))
             # variable assignation
-            # Name := R
+            # Name := T
             else:
                 var_name = self.token.name
                 self.match(self.token)
                 self.match(Token("ASSIGN", None))
-                t = self.R()
+                t = self.T([])
+                #eval
+                if self.reduce_beta and self.reduce_eta:
+                    t, n = t.reduce(self.verbose)
+                elif self.reduce_beta:
+                    t, n = t.beta_reduce(self.verbose)
+                elif self.reduce_eta:
+                    t, n = t.eta_reduce(self.verbose)
                 # update variable value
                 self.free_vars[var_name] = t
         else:
-            raise ValueError(f"Language keyword or variable name expected, got {self.token}.")
-
-    # reductions
-    # breduce T | ereduce T | breducev T | ereducev T | T
-    def R(self) -> Token:
-        context = []
-        if self.token == Token("breduce", None, "NAME"):
-            self.match(self.token)
-            t = self.T(context)
-            t,n = t.beta_reduce()
-            return t
-        elif self.token == Token("breducev", None, "NAME"):
-            self.match(self.token)
-            t = self.T(context)
-            t,n = t.beta_reduce(True)
-            return t
-        elif self.token == Token("ereduce", None, "NAME"):
-            self.match(self.token)
-            t = self.T(context)
-            t,n = t.eta_reduce()
-            return t
-        elif self.token == Token("ereducev", None, "NAME"):
-            self.match(self.token)
-            t = self.T(context)
-            t,n = t.eta_reduce(True)
-            return t
-        else:
-            return self.T(context)
+            raise ValueError(f"Language keyword or variable name expected, got {self.token.name}.")
 
     # OP Apply 
     # T -> E {("E")*}
