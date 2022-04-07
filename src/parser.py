@@ -151,7 +151,7 @@ class Lexer:
                     return Token(self.buffer, None)
             # SYNTAX
             elif self.state == 5:
-                if c in "().;":
+                if c in "().;<>,":
                     return Token(c, None)
                 else:
                     # error
@@ -305,15 +305,29 @@ class Parser:
     def T(self, context) -> term.Term:
         context = context[:]
         e = self.E(context)
-        while self.token == Token("(", None) or self.token.type == "NAME" or self.token.type == "NUMBER":
+        while self.token == Token("(", None) or self.token == Token("<", None)  or self.token.type == "NAME" or self.token.type == "NUMBER":
             e = term.Apply(e, self.E(context))
         return e
 
 
-    # E -> (T) | Name | Num | \ {("Name")+} . T
+    # E -> (T) | Name | Num | \ {("Name")+} . T | <T {("," "T")+}>
     def E(self, context) -> term.Term:
         context = context[:]
-        if self.token == Token("(", None):
+        if self.token == Token("<", None):
+            self.match(self.token)
+            t = [self.T(context)]
+            self.match(Token(",", None))
+            t.append(self.T(context))
+            while self.token == Token(",", None):
+                self.match(self.token)
+                t.append(self.T(context))
+            self.match(Token(">", None))
+            v = term.Variable("p")
+            c = v
+            for i in t:
+                c = term.Apply(c, i)
+            return term.Abstract(v, c)
+        elif self.token == Token("(", None):
             self.match(self.token)
             t = self.T(context)
             self.match(Token(")", None))
