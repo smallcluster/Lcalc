@@ -1,8 +1,5 @@
 import sys
-from tabnanny import verbose
-from tkinter.messagebox import NO
 import term
-import churchnum as church
 import os
 
 class Token:
@@ -262,8 +259,8 @@ class Parser:
                 elif self.reduce_eta:
                     t, n = t.eta_reduce(self.verbose)
 
-                if church.is_number(t):
-                    print(church.get_number(t))
+                if self.is_number(t):
+                    print(self.get_number(t))
                 # if the term is a free variable already defined, print it's tree
                 elif t.type == term.TermType.VARIABLE and t.name in self.free_vars: 
                     print(str(self.free_vars[t.name]))
@@ -349,7 +346,7 @@ class Parser:
             else:
                 raise ValueError(f"Free variable {self.token.name} is not defined.")
         elif self.token.type == "NUMBER":
-            n = church.gen_number(self.token.value)
+            n = self.gen_number(self.token.value)
             self.match(self.token)
             return n
         elif self.token == Token("LAMBDA", None):
@@ -373,3 +370,47 @@ class Parser:
                 return t
         else:
             raise ValueError(f"Unknown term structure, got {self.token}")
+
+    def get_number(self, t):
+        if t.type != term.TermType.ABSTRACT:
+            return None
+        ab1 = t
+        # ARCHIVE ONLY
+        # id =eta 1, check this special case
+        #if t.right == t.var:
+        #    return 1
+
+        # second abstract
+        if t.right.type != term.TermType.ABSTRACT:
+            return None
+        ab2 = t.right
+        # 0 or n :
+        if ab2.right.type == term.TermType.ABSTRACT:
+            return None
+        t = ab2.right
+        n = 0
+        while t.type == term.TermType.APPLY:
+            if t.left != ab1.var:
+                return None
+            n += 1
+            t = t.right
+        if t == ab2.var:
+                return n
+        return None
+
+    def is_number(self, t):
+        return self.get_number(t) != None
+
+    def gen_number(self, n):
+        f = term.Variable("f")
+        x = term.Variable("x")
+        t = x
+        for i in range(n):
+            t = term.Apply(f, t)
+        return term.Abstract(f, term.Abstract(x, t))
+
+    #TODO : format tuple for display
+    def tuple_to_str(self, t: term.Term) -> str:
+        if t.type != term.TermType.ABSTRACT:
+            return None
+        
