@@ -178,6 +178,7 @@ class Parser:
         self.EOF = Token("EOF", None)
         self.token = None
         self.free_vars = free_vars  # {name:term}
+        self.modules = set() # to do, implement a module system
         self.verbose = False
         self.reduce_beta = True
         self.reduce_eta = False
@@ -313,6 +314,7 @@ class Parser:
     # E -> (T) | Name | Num | \ {("Name")+} . T | <T {("," "T")+}>
     def E(self, context) -> term.Term:
         context = context[:]
+        # tuple
         if self.token == Token("<", None):
             self.match(self.token)
             t = [self.T(context)]
@@ -327,6 +329,7 @@ class Parser:
             for i in t:
                 c = term.Apply(c, i)
             return term.Abstract(v, c)
+
         elif self.token == Token("(", None):
             self.match(self.token)
             t = self.T(context)

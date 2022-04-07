@@ -1,0 +1,2 @@
+import "numbers.lc";
+proj := \n i c. c (pred i (\p y. p) (sub n i (\p x. p (\y.x)) (\x.x)));
