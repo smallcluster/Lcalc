@@ -325,6 +325,7 @@ class Parser:
                     self.free_vars[var_name] = (t, False)
                 elif recursive: # create recursive function
                     t = term.Abstract(vrecurse, t)
+                    #turing = self.turing_combinator()
                     turing = self.turing_combinator()
                     t = term.Apply(turing, t)
                     t.isrecursive = True
@@ -462,6 +463,15 @@ class Parser:
         b = term.Variable("b")
         A = term.Abstract(a, term.Abstract(b, term.Apply(b, term.Apply(term.Apply(a,a),b))))
         return term.Apply(A, A.copy())
+
+    def curry_combinator(self):
+        # λf.(λx.f (xx))(λx.f (xx))
+        f = term.Variable("f")
+        x1 = term.Variable("x")
+        x2 = term.Variable("x")
+        return term.Abstract(f, term.Apply(term.Abstract(x1, term.Apply(f, term.Apply(x1,x1))), term.Abstract(x1,term.Apply(f, term.Apply(x1,x1)))))
+
+
 
     def show_last_infos(self):
         print(f"Last evaluation took {self.last_eval_time}s for {self.last_reduction_number} reductions.")
