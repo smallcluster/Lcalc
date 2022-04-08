@@ -1,9 +1,10 @@
 import sys
 import term
 import os
+import time
 
 class Token:
-    def __init__(self, name: str, value, type: str = None) -> None:
+    def __init__(self, name: str, value = None, type: str = None) -> None:
         self.name = name
         self.value = value
         self.type = type
@@ -174,15 +175,24 @@ class Parser:
         self.lexer : Lexer = None
         self.EOF = Token("EOF", None)
         self.token = None
-        self.free_vars = free_vars  # {name:term}
+        self.free_vars = free_vars  # {name:(term, recursive ?)}
         self.modules = set() # to do, implement a module system
         self.verbose = False
         self.reduce_beta = True
         self.reduce_eta = False
 
+        # last infos
+        self.last_eval_time:float = 0.0
+        self.last_reduction_number:int = 0
+
+
     def listall(self):
         for k in self.free_vars:
-            print(f"{k} -> {self.free_vars[k]}")
+            t, recursive = self.free_vars[k]
+            if recursive:
+                print(f"{k} (recursive) -> {t}")
+            else:
+                print(f"{k} -> {t}")
             
     def match(self, token : Token) -> None:
         if token == self.token:
@@ -203,7 +213,7 @@ class Parser:
             self.I()
             self.match(Token(";", None))
             self.L()
-    # I -> clear| exit | listall | verbose | quiet | reduce {("both"|"beta"|"eta")} | import path | print T | Name := T 
+    # I -> clear| exit | listall |showlastinfos | verbose {("true"|"false")} | reduce {("both"|"beta"|"eta")} | import path | print T | Name := T 
     def I(self) -> None:
         if self.token.type == "NAME":
             # --built in keywords
@@ -219,14 +229,21 @@ class Parser:
             elif self.token == Token("listall", None, "NAME"):
                 self.match(self.token)
                 self.listall()
+            # showlastinfos
+            elif self.token == Token("showlastinfos"):
+                self.match(self.token)
+                self.show_last_infos()
             # verbose
             elif self.token == Token("verbose", None, "NAME"):
                 self.match(self.token)
-                self.verbose = True
-            # quiet
-            elif self.token == Token("quiet", None, "NAME"):
-                self.match(self.token)
-                self.verbose = False
+                if self.token == Token("true"):
+                    self.match(self.token)
+                    self.verbose = True
+                elif self.token == Token("false"):
+                    self.match(self.token)
+                    self.verbose = False
+                else:
+                    raise ValueError(f"verbose expects 'false' (default) or 'true'. Got {self.token.name}.")
             #reduce
             elif self.token == Token("reduce", None, "NAME"):
                 self.match(self.token)
@@ -250,20 +267,25 @@ class Parser:
             # print T
             elif self.token == Token("print", None, "NAME"):
                 self.match(self.token)
-                t = self.T([])
-                #eval
-                if self.reduce_beta and self.reduce_eta:
-                    t, n = t.reduce(self.verbose)
-                elif self.reduce_beta:
-                    t, n = t.beta_reduce(self.verbose)
-                elif self.reduce_eta:
-                    t, n = t.eta_reduce(self.verbose)
-
+                t, recursive = self.T([])
+                #eval if term isn't defined as a recursive function
+                if not t.isrecursive:
+                    start_time = time.time()
+                    if self.reduce_beta and self.reduce_eta:
+                        t, n = t.reduce(self.verbose)
+                    elif self.reduce_beta:
+                        t, n = t.beta_reduce(self.verbose)
+                    elif self.reduce_eta:
+                        t, n = t.eta_reduce(self.verbose)
+                    self.last_eval_time = time.time() - start_time
+                    self.last_reduction_number = n
+                    if self.verbose:
+                        self.show_last_infos()
                 if self.is_number(t):
                     print(self.get_number(t))
                 # if the term is a free variable already defined, print it's tree
                 elif t.type == term.TermType.VARIABLE and t.name in self.free_vars: 
-                    print(str(self.free_vars[t.name]))
+                    print(str(self.free_vars[t.name][0]))
                 else:
                     print(str(t))
             # import "path"
@@ -285,70 +307,91 @@ class Parser:
                 var_name = self.token.name
                 self.match(self.token)
                 self.match(Token("ASSIGN", None))
-                t = self.T([])
-                #eval
-                if self.reduce_beta and self.reduce_eta:
-                    t, n = t.reduce(self.verbose)
-                elif self.reduce_beta:
-                    t, n = t.beta_reduce(self.verbose)
-                elif self.reduce_eta:
-                    t, n = t.eta_reduce(self.verbose)
-                # update variable value
-                self.free_vars[var_name] = t
+                vrecurse = term.Variable("v")
+                t, recursive = self.T([], var_name, vrecurse)
+                if not t.isrecursive and not recursive:
+                    #eval
+                    start_time = time.time()
+                    if self.reduce_beta and self.reduce_eta:
+                        t, n = t.reduce(self.verbose)
+                    elif self.reduce_beta:
+                        t, n = t.beta_reduce(self.verbose)
+                    elif self.reduce_eta:
+                        t, n = t.eta_reduce(self.verbose)
+                    self.last_eval_time = time.time() - start_time
+                    self.last_reduction_number = n
+                    if self.verbose:
+                        self.show_last_infos()
+                    self.free_vars[var_name] = (t, False)
+                elif recursive: # create recursive function
+                    t = term.Abstract(vrecurse, t)
+                    turing = self.turing_combinator()
+                    t = term.Apply(turing, t)
+                    t.isrecursive = True
+                    self.free_vars[var_name] = (t, True)
+                else: # already defined recursive function
+                    self.free_vars[var_name] = (t, True)
         else:
             raise ValueError(f"Language keyword or variable name expected, got {self.token.name}.")
 
     # OP Apply 
     # T -> E {("E")*}
-    def T(self, context) -> term.Term:
+    def T(self, context, recurse_name : str = None, recurse_var:term.Variable = None) -> tuple[term.Term, bool]:
         context = context[:]
-        e = self.E(context)
+        e, recurse = self.E(context, recurse_name, recurse_var)
         while self.token == Token("(", None) or self.token == Token("<", None)  or self.token.type == "NAME" or self.token.type == "NUMBER":
-            e = term.Apply(e, self.E(context))
-        return e
+            etmp, recursetmp = self.E(context, recurse_name, recurse_var)
+            recurse = recurse or recursetmp
+            e = term.Apply(e, etmp)
+        return e, recurse
 
 
     # E -> (T) | Name | Num | \ {("Name")+} . T | <T {("," "T")+}>
-    def E(self, context) -> term.Term:
+    def E(self, context, recurse_name : str = None, recurse_var:term.Variable = None) -> tuple[term.Term, bool]:
         context = context[:]
         # tuple
         if self.token == Token("<", None):
             self.match(self.token)
-            t = [self.T(context)]
-            self.match(Token(",", None))
-            t.append(self.T(context))
+            tmp, recurse = self.T(context, recurse_name, recurse_var)
+            t = [tmp]
             while self.token == Token(",", None):
                 self.match(self.token)
-                t.append(self.T(context))
+                tmp, recursetmp = self.T(context, recurse_name, recurse_var)
+                recurse = recurse or recursetmp
+                t.append(tmp)
             self.match(Token(">", None))
             v = term.Variable("p")
             c = v
             for i in t:
                 c = term.Apply(c, i)
-            return term.Abstract(v, c)
+            return term.Abstract(v, c), recurse
 
         elif self.token == Token("(", None):
             self.match(self.token)
-            t = self.T(context)
+            t, recurse = self.T(context, recurse_name, recurse_var)
             self.match(Token(")", None))
-            return t
+            return t, recurse
         elif self.token.type == "NAME":
             # if var is in the context
             for v in context:
                 if v.name == self.token.name:
                     self.match(self.token)
-                    return v
+                    return v, False
+            # if var is the assignation -> recursuve function
+            if self.token.name == recurse_name:
+                self.match(self.token)
+                return recurse_var, True
             # if var is a declared free variable -> capture value
             if self.token.name in self.free_vars:
-                t = self.free_vars[self.token.name].copy()
+                t, recurse = self.free_vars[self.token.name]
                 self.match(self.token)
-                return t
+                return t.copy(), False
             else:
                 raise ValueError(f"Free variable {self.token.name} is not defined.")
         elif self.token.type == "NUMBER":
             n = self.gen_number(self.token.value)
             self.match(self.token)
-            return n
+            return n, False
         elif self.token == Token("LAMBDA", None):
             self.match(self.token)
             if self.token.type == "NAME":
@@ -362,12 +405,12 @@ class Parser:
                 context = context+vars
                 # keep only the last occurence of duplicate variables
                 context = list({v.name:v for v in context}.values())
-                t = self.T(context) # get abstracted body
+                t, recurse = self.T(context, recurse_name, recurse_var) # get abstracted body
                 # construct abstraction chain
                 vars.reverse()
                 for v in vars:
                     t = term.Abstract(v, t)
-                return t
+                return t, recurse
         else:
             raise ValueError(f"Unknown term structure, got {self.token}")
 
@@ -413,4 +456,13 @@ class Parser:
     def tuple_to_str(self, t: term.Term) -> str:
         if t.type != term.TermType.ABSTRACT:
             return None
+
+    def turing_combinator(self):
+        a = term.Variable("a")
+        b = term.Variable("b")
+        A = term.Abstract(a, term.Abstract(b, term.Apply(b, term.Apply(term.Apply(a,a),b))))
+        return term.Apply(A, A.copy())
+
+    def show_last_infos(self):
+        print(f"Last evaluation took {self.last_eval_time}s for {self.last_reduction_number} reductions.")
         

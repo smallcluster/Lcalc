@@ -6,10 +6,11 @@ class TermType(Enum):
     VARIABLE = 3
 
 class Term:
-    def __init__(self, left, right, type):
+    def __init__(self, left, right, type, isrecursive=False):
         self.left = left
         self.right = right
         self.type = type
+        self.isrecursive = isrecursive
 
     def beta_reduce(self, verbose=False):
         t = self
@@ -127,13 +128,13 @@ class Term:
         pass
     
 class Abstract(Term):
-    def __init__(self, var, term):
-        super().__init__(None, term, TermType.ABSTRACT)
+    def __init__(self, var, term, isrecursive=False):
+        super().__init__(None, term, TermType.ABSTRACT, isrecursive)
         self.var = var
 
     def copy(self):
         var = Variable(self.var.name)
-        return Abstract(var, self.right.replace(self.var, var))
+        return Abstract(var, self.right.replace(self.var, var), self.isrecursive)
 
     def to_string(self) -> str:
         txt = '\u03BB'+str(self.var)
@@ -175,11 +176,11 @@ class Abstract(Term):
         return self.right.is_var_in(var)
 
 class Apply(Term):
-    def __init__(self, left, right):
-        super().__init__(left, right, TermType.APPLY)
+    def __init__(self, left, right, isrecursive=False):
+        super().__init__(left, right, TermType.APPLY, isrecursive)
 
     def copy(self):
-        return Apply(self.left.copy(), self.right.copy())
+        return Apply(self.left.copy(), self.right.copy(), self.isrecursive)
     
     def to_string(self) -> str:
         if (self.left.type == TermType.VARIABLE or self.left.type == TermType.APPLY ) and self.right.type == TermType.VARIABLE:
@@ -228,8 +229,8 @@ class Apply(Term):
         return self.left.is_var_in(var) or self.right.is_var_in(var)
 
 class Variable(Term):
-    def __init__(self, name):
-        super().__init__(None, None, TermType.VARIABLE)
+    def __init__(self, name, isrecursive=False):
+        super().__init__(None, None, TermType.VARIABLE, isrecursive)
         self.name = name
 
     def copy(self):

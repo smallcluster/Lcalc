@@ -1,6 +1,9 @@
+import "booleans.lc";
 succ := \n f x. f(n f x);
 pred := \n f x. n (\g h. h (g f)) (\u.x) (\z.z); # pred de Kleene
 exp := \n m. m n;
 add := \n m f x. n f (m f x);
 mult := \n m f. n (m f);
 sub := \n m. m pred n;
+iszero := \n x y.n(\z.y)x;
+fact := \n. ifelse (iszero n) 1 (mult n (fact(pred n)));
