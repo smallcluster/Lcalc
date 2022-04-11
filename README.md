@@ -36,7 +36,7 @@ To import a library just run/write:
 import "path_to_script.lc";
 ```
 Default libraries:
-**WARINGING: SUBJECT TO CHANGES**
+**WARINGING, SUBJECT TO CHANGES**
 - ``numbers.lc`` : some functions for natural numbers (add, sub, pred, ...)
 - ``booleans.lc`` : definition of true/false and conditional structures
 - ``tuples.lc`` : some functions for tuples
