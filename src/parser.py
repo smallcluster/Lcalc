@@ -337,7 +337,7 @@ class Parser:
 
     # OP Apply 
     # T -> E {("E")*}
-    def T(self, context, recurse_name : str = None, recurse_var:term.Variable = None) -> tuple[term.Term, bool]:
+    def T(self, context, recurse_name : str = None, recurse_var:term.Variable = None):
         context = context[:]
         e, recurse = self.E(context, recurse_name, recurse_var)
         while self.token == Token("(", None) or self.token == Token("<", None)  or self.token.type == "NAME" or self.token.type == "NUMBER":
@@ -348,7 +348,7 @@ class Parser:
 
 
     # E -> (T) | Name | Num | \ {("Name")+} . T | <T {("," "T")+}>
-    def E(self, context, recurse_name : str = None, recurse_var:term.Variable = None) -> tuple[term.Term, bool]:
+    def E(self, context, recurse_name : str = None, recurse_var:term.Variable = None):
         context = context[:]
         # tuple
         if self.token == Token("<", None):
