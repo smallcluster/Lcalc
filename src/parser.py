@@ -281,13 +281,18 @@ class Parser:
                     self.last_reduction_number = n
                     if self.verbose:
                         self.show_last_infos()
-                if self.is_number(t):
-                    print(self.get_number(t))
-                # if the term is a free variable already defined, print it's tree
-                elif t.type == term.TermType.VARIABLE and t.name in self.free_vars: 
-                    print(str(self.free_vars[t.name][0]))
+                
+                n = self.get_number(t)
+                if n != None:
+                    print(n)
                 else:
-                    print(str(t))
+                    tu = self.tuple_to_str(t)
+                    if tu != None:
+                        print(tu)
+                    elif t.type == term.TermType.VARIABLE and t.name in self.free_vars: 
+                        print(str(self.free_vars[t.name][0]))
+                    else:
+                        print(str(t))
             # import "path"
             elif self.token == Token("import", None, "NAME"):
                 self.match(self.token)
@@ -453,10 +458,23 @@ class Parser:
             t = term.Apply(f, t)
         return term.Abstract(f, term.Abstract(x, t))
 
-    #TODO : format tuple for display
     def tuple_to_str(self, t: term.Term) -> str:
         if t.type != term.TermType.ABSTRACT:
             return None
+        v = t.var
+        next = t.right
+        buffer = ">"
+        while next.type == term.TermType.APPLY:
+            n = self.get_number(next.right)
+            if n != None:
+                buffer = ", "+ str(n) + buffer
+            else:
+                buffer = ", "+ str(next.right) + buffer
+            next = next.left
+        if next == v:
+            return "<"+buffer[1:]
+        return None
+
 
     def turing_combinator(self):
         a = term.Variable("a")
