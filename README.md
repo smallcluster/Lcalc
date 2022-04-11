@@ -1,6 +1,6 @@
 # ![](logo.png) A lambda calculus interpreter
 
-λcalc is a untyped lambda calculus interpreter written in pure python :
+λcalc is a untyped lambda calculus interpreter written in pure Python :
 
 - Haskell ('\\') or utf8 lambda ('λ') notation
 - Leftmost-outermost Beta and/or Eta reduction
@@ -40,3 +40,7 @@ Default libraries:
 - ``numbers.lc`` : some functions for natural numbers (add, sub, pred, ...)
 - ``booleans.lc`` : definition of true/false and conditional structures
 - ``tuples.lc`` : some functions for tuples
+
+# Known issues
+
+Due to the way Python implement its recursive function call stack, big terms (trees with a large depth) will result in the Python process to panic (Ex: printing a number larger than 10000) and produce a segmentation fault. The only solution, for now, is to use a stackless Python interpreter (Ex: Stackless Python). 
