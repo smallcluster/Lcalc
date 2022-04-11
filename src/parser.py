@@ -213,12 +213,30 @@ class Parser:
             self.I()
             self.match(Token(";", None))
             self.L()
-    # I -> clear| exit | listall |showlastinfos | verbose {("true"|"false")} | reduce {("both"|"beta"|"eta")} | import path | print T | Name := T 
+    # I -> help | clear | exit | listall |showlastinfos | verbose {("true"|"false")} | reduce {("both"|"beta"|"eta")} | import path | print T | Name := T 
     def I(self) -> None:
         if self.token.type == "NAME":
             # --built in keywords
+            # help
+            if self.token == Token("help", None, "NAME"):
+                self.match(self.token)
+                print("----------- BASICS -----------")
+                print("print TERM; -> display evaluated term, ex : print (\\x.x) 1;")
+                print("NAME := TERM; -> assign a term to a variable, ex : id := \\x.x; ")
+                print("Free variables must be defined and are captured by value.")
+                print("Built in Support for church numerals and tuples ex: print <1,2,3>;")
+                print("-------- COMMAND LIST --------")
+                print("help; -> display this help")
+                print("clear; -> clear console output")
+                print("exit; -> quit interpreter")
+                print("listall; -> display all defined lambda terms")
+                print("showlastinfos; -> display last evaluation time and number of reductions")
+                print("verbose true/false; -> show/hide evaluation steps")
+                print("reduce beta(default)/eta/both; -> evaluation strategy : leftmost outermost beta/eta reduction or both")
+                print("import \"path\"; -> load terms from file")
+                print("------------------------------")
             # clear
-            if self.token == Token("clear", None, "NAME"):
+            elif self.token == Token("clear", None, "NAME"):
                 self.match(self.token)
                 os.system('cls' if os.name=='nt' else 'clear')
             # exit
@@ -471,7 +489,9 @@ class Parser:
             else:
                 buffer = ", "+ str(next.right) + buffer
             next = next.left
-        if next == v:
+        if len(buffer) == 1:
+            return None
+        elif next == v:
             return "<"+buffer[1:]
         return None
 

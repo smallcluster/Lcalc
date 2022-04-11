@@ -16,7 +16,7 @@ if __name__ == "__main__":
     else:
         # Interactive interpreter
         print("Lcalc v1.0, JAFFUER Pierre")
-        print("Type 'exit' to quit, 'clear' to clear console.")
+        print("Type 'exit;' to quit, 'help;' for help.")
         line = ""
         buffer = ""
         new_input = True
@@ -27,13 +27,7 @@ if __name__ == "__main__":
             else:
                 line = input("... ")
 
-            if line.replace(" ", "") == "exit":
-                break
-            elif line.replace(" ", "") == "clear":
-                clear()
-            elif line.replace(" ", "") == "listall":
-                P.listall()
-            elif line.endswith(";"):
+            if line.endswith(";"):
                 buffer += line
                 try:
                     P.parse(StringReader(buffer))
