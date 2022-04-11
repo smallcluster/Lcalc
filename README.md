@@ -1,11 +1,15 @@
 # ![](logo.png) A lambda calculus interpreter
 
-λcalc is a untyped lambda calculus interpreter written in pure Python :
+![](recursive.gif)
+
+λcalc is a untyped lambda calculus interpreter written in pure Python.
+
+# Features
 
 - Haskell ('\\') or utf8 lambda ('λ') notation
 - Leftmost-outermost Beta and/or Eta reduction
-- Built in support for Church numerals and tuples encoding (``<1,2,3...>``)
 - Automatic support for recursively defined terms using Turing's fixed point combinator
+- Built in support for Church numerals and tuples encoding
 - Show/hide reduction steps with statistics (number of reductions and evaluation time)
 - Simple scripting language
 
