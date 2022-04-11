@@ -47,4 +47,4 @@ Default libraries:
 
 # Known issues
 
-Due to the way Python implement its recursive function call stack, big terms (trees with a large depth) will result in the Python process to panic (Ex: printing a number larger than 10000), resulting in a segmentation fault. The only solution, for now, is to use a stackless Python interpreter (Ex: Stackless Python). 
+Due to the way Python implement its recursive function call stack, big terms (trees with a large depth) will provoke the Python process to panic (Ex: printing a number larger than 10000), resulting in a segmentation fault. The only solution, for now, is to use a stackless Python interpreter (Ex: Stackless Python). 
