@@ -4,6 +4,10 @@ from parser import FileReader, Parser, StringReader
 
 
 if __name__ == "__main__":
+
+    version = "Lcalc v1.0, JAFFUER Pierre"
+
+
     sys.setrecursionlimit(10**9)
     clear = lambda : os.system('cls' if os.name=='nt' else 'clear')
     P = Parser()
@@ -15,7 +19,7 @@ if __name__ == "__main__":
             P.parse(FileReader(f))
     else:
         # Interactive interpreter
-        print("Lcalc v1.0, JAFFUER Pierre")
+        print(version)
         print("Type 'exit;' to quit, 'help;' for help.")
         line = ""
         buffer = ""
