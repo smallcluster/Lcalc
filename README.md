@@ -16,7 +16,7 @@
 - Show/hide reduction steps with statistics (number of reductions and evaluation time)
 - Simple scripting language
 
-For now, free variables in terms have to defined first to use them. Furthermore, they are captured by value.
+For now, free variables in terms have to be defined first to use them. Furthermore, they are captured by value.
 
 # Requirements
 
