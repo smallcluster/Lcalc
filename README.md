@@ -1,8 +1,11 @@
-# ![](logo.png) A lambda calculus interpreter
+# ![](logo.png) A lambda calculus interpreter 
+
+![GitHub](https://img.shields.io/github/license/smallcluster/Lcalc?logo=Github)
 
 ![](recursive.gif)
 
 λcalc is a untyped lambda calculus interpreter written in pure Python.
+
 
 # Features
 
