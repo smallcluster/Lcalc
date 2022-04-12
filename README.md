@@ -14,7 +14,6 @@
 - Automatic support for recursively defined terms using Turing's fixed point combinator
 - Built in support for Church numerals and tuples encoding
 - Show/hide reduction steps with statistics (number of reductions and evaluation time)
-- Simple scripting language
 
 For now, free variables in terms have to be defined first to use them. Furthermore, they are captured by value.
 
