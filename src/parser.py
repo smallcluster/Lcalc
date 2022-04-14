@@ -1,4 +1,3 @@
-from ast import Return
 import sys
 import term
 import os
@@ -557,33 +556,44 @@ class Parser:
             return tuple(L) if len(L) > 0 else None
         return None
 
+    def list_pile(self, h, t):
+        x = term.Variable("x")
+        y = term.Variable("y")
+        return term.Abstract(x, term.Abstract(y, term.Apply( term.Apply(x, h), t)))
+
     def gen_list(self, L):
         x = term.Variable("x")
         y = term.Variable("y")
-        t = y if L == [] else x
-        for e in L:
-            t = term.Apply(t, e)
-        return term.Abstract(x, term.Abstract(y, t))
+        t = term.Abstract(x, term.Abstract(y, y)) # empty list
+        for e in reversed(L):
+            t = self.list_pile(e, t)
+        return t
 
     def get_list(self, t:term.Term):
-        if t.type != term.TermType.ABSTRACT:
-            return None
-        var1 = t.var
-        next = t.right
-        if next.type != term.TermType.ABSTRACT:
-            return None
-        var2 = next.var
-        next = next.right
         L = []
-        if next == var2:
-            return L
-        while next.type == term.TermType.APPLY:
-            L.append(next.right)
-            next = next.left
-        if next == var1:
-            L.reverse()
-            return L
-        return None
+        while True:
+            # \x y .
+            if t.type != term.TermType.ABSTRACT:
+                return None
+            var1 = t.var
+            t = t.right
+            if t.type != term.TermType.ABSTRACT:
+                return None
+            var2 = t.var
+            t = t.right
+            # \x y . y
+            if t == var2:
+                return L
+            elif t.type != term.TermType.APPLY:
+                return None
+            elif t.left.type != term.TermType.APPLY:
+                return None
+            elif t.left.left != var1:
+                return None
+            # \x y . x H T
+            else:
+                L.append(t.left.right)
+                t = t.right
 
     def get_free_var(self, t:term.Term) -> str:
         for v in self.free_vars:
