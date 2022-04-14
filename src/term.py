@@ -1,4 +1,5 @@
 from enum import Enum
+import queue
 
 class TermType(Enum):
     ABSTRACT = 1
@@ -130,11 +131,7 @@ class Term:
         pass
     def to_string(self):
         pass
-    def can_beta_reduce(self) -> bool:
-        pass
     def one_step_beta_reduce(self):
-        pass
-    def can_eta_reduce(self) -> bool:
         pass
     def one_step_eta_reduce(self):
         pass

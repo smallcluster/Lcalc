@@ -189,12 +189,12 @@ class Lexer:
             else:
                 raise ValueError(f"Unknown char sequence '{self.buffer}' at {self.line_no}")
 class Parser:
-    def __init__(self, free_vars: dict = dict(), combinator = None) -> None:
+    def __init__(self, free_vars: dict = dict(), modules=set(), combinator = None) -> None:
         self.lexer : Lexer = None
         self.EOF = Token("EOF", None)
         self.token = None
         self.free_vars = free_vars  # {name:(term, recursive ?)}
-        self.modules = set() # to do, implement a module system
+        self.modules = modules
         self.verbose = False
         self.reduce_beta = True
         self.reduce_eta = False
@@ -333,12 +333,18 @@ class Parser:
                     raise ValueError(f"Expected a path name, got {self.token}")
                 path = self.token.value
                 self.match(self.token)
+
+                path = os.path.abspath(path) # convert to absolute
                 # check if file exist
                 if not os.path.exists(path):
                     raise ValueError(f"File {path} do not exist.")
-                # parse file content
-                with open(path, "r") as f:
-                    Parser(self.free_vars, self.combinator).parse(FileReader(f))
+                # check if not already imported and parse
+                if path not in self.modules:
+                    self.modules.add(path)
+                    # parse file content
+                    with open(path, "r") as f:
+                        Parser(self.free_vars, self.modules, self.combinator).parse(FileReader(f))
+                    
             # defaultcombinator T
             elif self.token == Token("defaultcombinator"):
                 self.match(self.token)

@@ -11,8 +11,8 @@
 
 - Haskell ('\\') or utf8 lambda ('λ') notation
 - Leftmost-outermost Beta and/or Eta reduction
-- Automatic support for recursively defined terms using Turing's fixed point combinator
-- Built in support for Church numerals and tuples encoding
+- Automatic support for recursively defined terms using fixed point combinators (**extremely slow**)
+- Built in support for Church numerals, tuples and lists encoding
 - Show/hide reduction steps with statistics (number of reductions and evaluation time)
 
 For now, free variables in terms have to be defined first to use them. Furthermore, they are captured by value.
@@ -43,9 +43,11 @@ import "path_to_script.lc";
 ```
 Default libraries:
 **WARINGING, SUBJECT TO CHANGES**
-- ``numbers.lc`` : some functions for natural numbers (add, sub, pred, ...)
+- ``combinators.lc`` : some fixed point combinators
 - ``booleans.lc`` : definition of true/false and conditional structures
+- ``numbers.lc`` : some functions for natural numbers (add, sub, pred, ...)
 - ``tuples.lc`` : some functions for tuples
+- ``lists.lc`` : some functions for lists
 
 # Known issues
 
