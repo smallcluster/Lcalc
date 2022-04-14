@@ -1,0 +1,2 @@
+import "numbers.lc";
+addlist := \l. l (\h t. add h (addlist t) ) 0;
