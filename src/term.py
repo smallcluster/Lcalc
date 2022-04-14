@@ -5,7 +5,7 @@ class TermType(Enum):
     ABSTRACT = 1
     APPLY = 2
     VARIABLE = 3
-
+    
 class Term:
     def __init__(self, left, right, type):
         self.left = left
@@ -159,9 +159,6 @@ class Abstract(Term):
             next = next.right
         return f"{txt}.{next.to_string()}"
 
-    # def can_beta_reduce(self) -> bool:
-    #     return self.right.can_beta_reduce()
-
     def replace(self, var, term):
         if self.var == var:
             return self.right.replace(var, term)
@@ -176,11 +173,6 @@ class Abstract(Term):
 
     def get_abstracted_vars(self):
         return self.right.get_abstracted_vars()+[self.var]
-
-    # def can_eta_reduce(self) -> bool:
-    #     if self.right.type == TermType.APPLY and self.right.right == self.var and not self.right.left.is_var_in(self.var):
-    #         return True
-    #     return self.right.can_eta_reduce()
     
     def one_step_eta_reduce(self):
         if self.right.type == TermType.APPLY and self.right.right == self.var and not self.right.left.is_var_in(self.var):
@@ -210,19 +202,6 @@ class Apply(Term):
             return f"({self.left.to_string()}) ({self.right.to_string()})"
         elif self.left.type == TermType.APPLY and (self.right.type == TermType.ABSTRACT or  self.right.type == TermType.APPLY):
             return f"{self.left.to_string()} ({self.right.to_string()})"
-
-
-    # def can_beta_reduce(self) -> bool:
-    #     if self.left.type == TermType.ABSTRACT:
-    #         return True
-    #     elif self.left.can_beta_reduce():
-    #         return True
-    #     return self.right.can_beta_reduce()
-
-    # def can_eta_reduce(self) -> bool:
-    #     if self.left.can_eta_reduce():
-    #         return True
-    #     return self.right.can_eta_reduce()
 
     def one_step_eta_reduce(self):
         r = self.left.one_step_eta_reduce()
@@ -264,12 +243,6 @@ class Variable(Term):
 
     def to_string(self):
         return self.name
-    
-    # def can_beta_reduce(self) -> bool:
-    #     return False
-
-    # def can_eta_reduce(self) -> bool:
-    #     return False
 
     def replace(self, var, term):
         if self == var:
