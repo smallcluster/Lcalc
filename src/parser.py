@@ -125,12 +125,14 @@ class Lexer:
                         self.buffer += c
                 else:
                     return Token(self.buffer, int(self.buffer))
-            # ASSIGN
+            # ASSIGN or list pile
             elif self.state == 3:
                 if not self.reader.is_eof():
                     c = self.reader.read_char()
                     if c == '=':
                         return Token("ASSIGN", ":=")
+                    elif c == ':':
+                        return Token("::")
                     else:
                         # error
                         self.state = -1
@@ -391,16 +393,26 @@ class Parser:
             raise ValueError(f"Language keyword or variable name expected, got {self.token.name}.")
 
     # OP Apply 
-    # T -> E {("E")*}
+    # T -> R {("R")*}
     def T(self, context, recurse_name : str = None, recurse_var:term.Variable = None):
         context = context[:]
-        e, recurse = self.E(context, recurse_name, recurse_var)
-        while self.token == Token("(", None) or self.token == Token("<", None)  or self.token == Token("[", None)  or self.token.type == "NAME" or self.token.type == "NUMBER":
-            etmp, recursetmp = self.E(context, recurse_name, recurse_var)
+        e, recurse = self.R(context, recurse_name, recurse_var)
+        while self.token == Token("(", None) or self.token == Token("<", None) or self.token == Token("[", None)  or self.token.type == "NAME" or self.token.type == "NUMBER":
+            etmp, recursetmp = self.R(context, recurse_name, recurse_var)
             recurse = recurse or recursetmp
             e = term.Apply(e, etmp)
         return e, recurse
 
+    # R -> E | E :: R
+    def R(self, context, recurse_name : str = None, recurse_var:term.Variable = None):
+        context = context[:]
+        e, recurse = self.E(context, recurse_name, recurse_var)
+        if self.token == Token("::"):
+            self.match(self.token)
+            r, recursetmp = self.R(context, recurse_name, recurse_var)
+            recurse = recurse or recursetmp
+            e = self.list_pile(e, r)
+        return (e, recurse)
 
     # E -> (T) | Name | Num | \ {("Name")+} . T | <T {("," "T")+}> | [{("T")? ("," "T")+}]
     def E(self, context, recurse_name : str = None, recurse_var:term.Variable = None):

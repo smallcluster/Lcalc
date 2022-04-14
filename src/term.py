@@ -20,8 +20,6 @@ class Term:
         # do ... while
         t, reduced = t.one_step_beta_reduce()
         if t == None or not reduced:
-            if verbose:
-                print(f"1 -> {oldt}")
             return (oldt, n)
         while reduced:
             n += 1
@@ -40,8 +38,6 @@ class Term:
         # do ... while
         t, reduced = t.one_step_eta_reduce()
         if t == None or not reduced:
-            if verbose:
-                print(f"1 -> {oldt}")
             return (oldt, n)
         while reduced:
             n += 1

@@ -1,2 +1,3 @@
 import "numbers.lc";
+nil := \x y . y;
 addlist := \l. l (\h t. add h (addlist t) ) 0;
