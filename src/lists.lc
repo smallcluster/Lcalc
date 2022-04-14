@@ -1,3 +1,9 @@
 import "numbers.lc";
+
 nil := \x y . y;
+# Support 2 notations : [T, ...] and H::T
+# EXEMPLE
+# print [1,2,3];
+# print 1::2::3::nil;
+
 addlist := \l. l (\h t. add h (addlist t) ) 0;
