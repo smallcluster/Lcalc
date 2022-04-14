@@ -1,3 +1,4 @@
+from ast import Return
 import sys
 import term
 import os
@@ -149,7 +150,7 @@ class Lexer:
                     return Token(self.buffer, None)
             # SYNTAX
             elif self.state == 5:
-                if c in "().;<>,":
+                if c in "().;<>,[]":
                     return Token(c, None)
                 else:
                     # error
@@ -299,18 +300,7 @@ class Parser:
                     self.last_reduction_number = n
                     if self.verbose:
                         self.show_last_infos()
-                
-                n = self.get_number(t)
-                if n != None:
-                    print(n)
-                else:
-                    tu = self.tuple_to_str(t)
-                    if tu != None:
-                        print(tu)
-                    elif t.type == term.TermType.VARIABLE and t.name in self.free_vars: 
-                        print(str(self.free_vars[t.name][0]))
-                    else:
-                        print(str(t))
+                print(self.format_term(t))
             # import "path"
             elif self.token == Token("import", None, "NAME"):
                 self.match(self.token)
@@ -363,14 +353,14 @@ class Parser:
     def T(self, context, recurse_name : str = None, recurse_var:term.Variable = None):
         context = context[:]
         e, recurse = self.E(context, recurse_name, recurse_var)
-        while self.token == Token("(", None) or self.token == Token("<", None)  or self.token.type == "NAME" or self.token.type == "NUMBER":
+        while self.token == Token("(", None) or self.token == Token("<", None)  or self.token == Token("[", None)  or self.token.type == "NAME" or self.token.type == "NUMBER":
             etmp, recursetmp = self.E(context, recurse_name, recurse_var)
             recurse = recurse or recursetmp
             e = term.Apply(e, etmp)
         return e, recurse
 
 
-    # E -> (T) | Name | Num | \ {("Name")+} . T | <T {("," "T")+}>
+    # E -> (T) | Name | Num | \ {("Name")+} . T | <T {("," "T")+}> | [{("T")? ("," "T")+}]
     def E(self, context, recurse_name : str = None, recurse_var:term.Variable = None):
         context = context[:]
         # tuple
@@ -384,12 +374,23 @@ class Parser:
                 recurse = recurse or recursetmp
                 t.append(tmp)
             self.match(Token(">", None))
-            v = term.Variable("p")
-            c = v
-            for i in t:
-                c = term.Apply(c, i)
-            return term.Abstract(v, c), recurse
-
+            return self.gen_tuple(t), recurse
+        elif self.token == Token("["):
+            self.match(self.token)
+            # empty list
+            if self.token == Token("]"):
+                self.match(self.token)
+                return self.gen_list([]), False
+            # read list
+            tmp, recurse = self.T(context, recurse_name, recurse_var)
+            t = [tmp]
+            while self.token == Token(",", None):
+                self.match(self.token)
+                tmp, recursetmp = self.T(context, recurse_name, recurse_var)
+                recurse = recurse or recursetmp
+                t.append(tmp)
+            self.match(Token("]", None))
+            return self.gen_list(t), recurse
         elif self.token == Token("(", None):
             self.match(self.token)
             t, recurse = self.T(context, recurse_name, recurse_var)
@@ -442,11 +443,6 @@ class Parser:
         if t.type != term.TermType.ABSTRACT:
             return None
         ab1 = t
-        # ARCHIVE ONLY
-        # id =eta 1, check this special case
-        #if t.right == t.var:
-        #    return 1
-
         # second abstract
         if t.right.type != term.TermType.ABSTRACT:
             return None
@@ -465,9 +461,6 @@ class Parser:
                 return n
         return None
 
-    def is_number(self, t):
-        return self.get_number(t) != None
-
     def gen_number(self, n):
         f = term.Variable("f")
         x = term.Variable("x")
@@ -475,26 +468,6 @@ class Parser:
         for i in range(n):
             t = term.Apply(f, t)
         return term.Abstract(f, term.Abstract(x, t))
-
-    def tuple_to_str(self, t: term.Term) -> str:
-        if t.type != term.TermType.ABSTRACT:
-            return None
-        v = t.var
-        next = t.right
-        buffer = ">"
-        while next.type == term.TermType.APPLY:
-            n = self.get_number(next.right)
-            if n != None:
-                buffer = ", "+ str(n) + buffer
-            else:
-                buffer = ", "+ str(next.right) + buffer
-            next = next.left
-        if len(buffer) == 1:
-            return None
-        elif next == v:
-            return "<"+buffer[1:]
-        return None
-
 
     def turing_combinator(self):
         a = term.Variable("a")
@@ -509,8 +482,82 @@ class Parser:
         x2 = term.Variable("x")
         return term.Abstract(f, term.Apply(term.Abstract(x1, term.Apply(f, term.Apply(x1,x1))), term.Abstract(x1,term.Apply(f, term.Apply(x1,x1)))))
 
-
-
     def show_last_infos(self):
         print(f"Last evaluation took {self.last_eval_time}s for {self.last_reduction_number} reductions.")
+
+    def gen_tuple(self, L):
+        x = term.Variable("x")
+        t = x
+        for e in L:
+            t = term.Apply(t, e)
+        return term.Abstract(x, t)
+
+    def get_tuple(self, t:term.Term):
+        if t.type != term.TermType.ABSTRACT:
+            return None
+        v = t.var
+        next = t.right
+        L = []
+        while next.type == term.TermType.APPLY:
+            L.append(next.right)
+            next = next.left
+        if next == v:
+            L.reverse()
+            return tuple(L)
+        return None
+
+    def gen_list(self, L):
+        x = term.Variable("x")
+        y = term.Variable("y")
+        t = y if L == [] else x
+        for e in L:
+            t = term.Apply(t, e)
+        return term.Abstract(x, term.Abstract(y, t))
+
+    def get_list(self, t:term.Term):
+        if t.type != term.TermType.ABSTRACT:
+            return None
+        var1 = t.var
+        next = t.right
+        if next.type != term.TermType.ABSTRACT:
+            return None
+        var2 = next.var
+        next = next.right
+        L = []
+        if next == var2:
+            return L
+        while next.type == term.TermType.APPLY:
+            L.append(next.right)
+            next = next.left
+        if next == var1:
+            L.reverse()
+            return L
+        return None
         
+    def format_term(self, t:term.Term) -> str:
+        # check if exist
+        for v in self.free_vars:
+            if t.is_equals(self.free_vars[v][0]):
+                return v
+        # check if number
+        n = self.get_number(t)
+        if n != None:
+            return str(n)
+        # check tuple
+        tp = self.get_tuple(t)
+        if tp != None:
+            if len(tp) == 0:
+                return "<>"
+            buffer = "<"
+            for i in tp:
+                buffer += self.format_term(i)+","
+            return buffer[:-1]+">"
+        # check list
+        li = self.get_list(t)
+        if li != None:
+            buffer = "["
+            for i in li:
+                buffer += self.format_term(i)+","
+            return buffer[:-1]+"]"
+        # unknown
+        return str(t)
