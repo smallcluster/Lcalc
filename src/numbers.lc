@@ -1,4 +1,6 @@
 import "booleans.lc";
+import "tuples.lc";
+
 succ := \n f x. f(n f x);
 pred := \n f x. n (\g h. h (g f)) (\u.x) (\z.z); # pred de Kleene
 exp := \n m. m n;
@@ -6,4 +8,6 @@ add := \n m f x. n f (m f x);
 mult := \n m f. n (m f);
 sub := \n m. m pred n;
 iszero := \n x y.n(\z.y)x;
-fact := \n. ifelse (iszero n) 1 (mult n (fact(pred n)));
+fact := \n. ifelse (iszero n) 1 (mult n (fact(pred n))); # VERY SLOW ! fact 3 -> 6 min on a core i7
+factp := \n. (n (\c. <mult (c (\x y. x)) (c (\x y. y)), succ (c (\x y. y))> ) <1,1> ) (\x y. x); # better ! factp 5 -> 23s on a core i7
+addlist := \l. l (\h t. add h (addlist t) ) 0;

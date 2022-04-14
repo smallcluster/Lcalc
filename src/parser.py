@@ -101,6 +101,9 @@ class Lexer:
                     self.buffer = c
                 elif c == '"':
                     self.state = 7
+                elif c == "<":
+                    self.state = 8
+                    self.buffer = c
                 else:
                     self.state = 5
             # COMMENTS
@@ -137,6 +140,20 @@ class Lexer:
                     # error
                     self.state = -1
                     self.buffer = c+"EOF"
+            # ASSIGN no eval
+            elif self.state == 8:
+                if not self.reader.is_eof():
+                    c = self.reader.read_char()
+                    if c == '-':
+                        return Token("ASSIGN_NO_EVAL", "<-")
+                    else:
+                        # backtrace and return "<"
+                        self.reader.set_pos(self.reader.get_pos()-1) # go back one
+                        return Token("<")
+                else:
+                    # error
+                    self.state = -1
+                    self.buffer = c+"EOF"
             # KEYWORD
             elif self.state == 4:
                 if not self.reader.is_eof():
@@ -150,7 +167,7 @@ class Lexer:
                     return Token(self.buffer, None)
             # SYNTAX
             elif self.state == 5:
-                if c in "().;<>,[]":
+                if c in "().;>,[]":
                     return Token(c, None)
                 else:
                     # error
@@ -172,7 +189,7 @@ class Lexer:
             else:
                 raise ValueError(f"Unknown char sequence '{self.buffer}' at {self.line_no}")
 class Parser:
-    def __init__(self, free_vars: dict = dict()) -> None:
+    def __init__(self, free_vars: dict = dict(), combinator = None) -> None:
         self.lexer : Lexer = None
         self.EOF = Token("EOF", None)
         self.token = None
@@ -181,6 +198,7 @@ class Parser:
         self.verbose = False
         self.reduce_beta = True
         self.reduce_eta = False
+        self.combinator = combinator if combinator != None else self.turing_combinator()
 
         # last infos
         self.last_eval_time:float = 0.0
@@ -214,7 +232,8 @@ class Parser:
             self.I()
             self.match(Token(";", None))
             self.L()
-    # I -> help | clear | exit | listall |showlastinfos | verbose {("true"|"false")} | reduce {("both"|"beta"|"eta")} | import path | print T | Name := T 
+    # I -> help | clear | exit | listall |showlastinfos | verbose {("true"|"false")} | reduce {("both"|"beta"|"eta")} | import path | 
+    # print T | Name := T | Name <- T | defaultcombinator T;
     def I(self) -> None:
         if self.token.type == "NAME":
             # --built in keywords
@@ -223,7 +242,9 @@ class Parser:
                 self.match(self.token)
                 print("----------- BASICS -----------")
                 print("print TERM; -> display evaluated term, ex : print (\\x.x) 1;")
-                print("NAME := TERM; -> assign a term to a variable, ex : id := \\x.x; ")
+                print("printnoeval TERM; -> display term without evaluating it")
+                print("NAME := TERM; -> assign evaluated term to a variable, ex : id := (\\x.x) 2;")
+                print("NAME <- TERM; -> assign a term to a variable without evaluating it")
                 print("Free variables must be defined and are captured by value.")
                 print("Built in Support for church numerals and tuples ex: print <1,2,3>;")
                 print("-------- COMMAND LIST --------")
@@ -234,6 +255,7 @@ class Parser:
                 print("showlastinfos; -> display last evaluation time and number of reductions")
                 print("verbose true/false; -> show/hide evaluation steps")
                 print("reduce beta(default)/eta/both; -> evaluation strategy : leftmost outermost beta/eta reduction or both")
+                print("defaultcombinator T; -> specify the default fixed point combinator (Turing by default)")
                 print("import \"path\"; -> load terms from file")
                 print("------------------------------")
             # clear
@@ -287,19 +309,22 @@ class Parser:
             elif self.token == Token("print", None, "NAME"):
                 self.match(self.token)
                 t, recursive = self.T([])
-                #eval if term isn't defined as a recursive function
-                if not t.isrecursive:
-                    start_time = time.time()
-                    if self.reduce_beta and self.reduce_eta:
-                        t, n = t.reduce(self.verbose)
-                    elif self.reduce_beta:
-                        t, n = t.beta_reduce(self.verbose)
-                    elif self.reduce_eta:
-                        t, n = t.eta_reduce(self.verbose)
-                    self.last_eval_time = time.time() - start_time
-                    self.last_reduction_number = n
-                    if self.verbose:
-                        self.show_last_infos()
+                start_time = time.time()
+                if self.reduce_beta and self.reduce_eta:
+                    t, n = t.reduce(self.verbose)
+                elif self.reduce_beta:
+                    t, n = t.beta_reduce(self.verbose)
+                elif self.reduce_eta:
+                    t, n = t.eta_reduce(self.verbose)
+                self.last_eval_time = time.time() - start_time
+                self.last_reduction_number = n
+                if self.verbose:
+                    self.show_last_infos()
+                print(self.format_term(t))
+            # printnoeval T
+            elif self.token == Token("printnoeval", None, "NAME"):
+                self.match(self.token)
+                t, recursive = self.T([])
                 print(self.format_term(t))
             # import "path"
             elif self.token == Token("import", None, "NAME"):
@@ -313,16 +338,37 @@ class Parser:
                     raise ValueError(f"File {path} do not exist.")
                 # parse file content
                 with open(path, "r") as f:
-                    Parser(self.free_vars).parse(FileReader(f))
+                    Parser(self.free_vars, self.combinator).parse(FileReader(f))
+            # defaultcombinator T
+            elif self.token == Token("defaultcombinator"):
+                self.match(self.token)
+                t, recursive = self.T([])
+                self.combinator = t
             # variable assignation
-            # Name := T
+            # Name := T | Name <- T
             else:
                 var_name = self.token.name
                 self.match(self.token)
-                self.match(Token("ASSIGN", None))
+
+                no_eval = False
+                if self.token == Token("ASSIGN"):
+                    self.match(self.token)
+                elif self.token == Token("ASSIGN_NO_EVAL"):
+                    self.match(self.token)
+                    no_eval = True
+                else:
+                    raise ValueError(f"Expected ':=' or '<-', got '{self.token.name}'")
+
                 vrecurse = term.Variable("v")
                 t, recursive = self.T([], var_name, vrecurse)
-                if not t.isrecursive and not recursive:
+
+                if recursive:
+                    t = term.Abstract(vrecurse, t)
+                    t = term.Apply(self.combinator.copy(), t)
+                    self.free_vars[var_name] = (t, True)
+                elif no_eval:
+                    self.free_vars[var_name] = (t, False)
+                else:
                     #eval
                     start_time = time.time()
                     if self.reduce_beta and self.reduce_eta:
@@ -336,15 +382,6 @@ class Parser:
                     if self.verbose:
                         self.show_last_infos()
                     self.free_vars[var_name] = (t, False)
-                elif recursive: # create recursive function
-                    t = term.Abstract(vrecurse, t)
-                    #turing = self.turing_combinator()
-                    turing = self.turing_combinator()
-                    t = term.Apply(turing, t)
-                    t.isrecursive = True
-                    self.free_vars[var_name] = (t, True)
-                else: # already defined recursive function
-                    self.free_vars[var_name] = (t, True)
         else:
             raise ValueError(f"Language keyword or variable name expected, got {self.token.name}.")
 
@@ -482,6 +519,14 @@ class Parser:
         x2 = term.Variable("x")
         return term.Abstract(f, term.Apply(term.Abstract(x1, term.Apply(f, term.Apply(x1,x1))), term.Abstract(x1,term.Apply(f, term.Apply(x1,x1)))))
 
+    def strict_combinator(self):
+        f = term.Variable("f")
+        x1 = term.Variable("x")
+        x2 = term.Variable("x")
+        v1 = term.Variable("v")
+        v2 = term.Variable("v")
+        return term.Abstract(f, term.Apply(term.term.Abstract(x1, term.term.Apply(f, term.term.Abstract(v1, term.term.Apply(term.term.Apply(x1,x1),v1)))), term.term.Abstract(x2, term.term.Apply(f, term.term.Abstract(v2, term.term.Apply(term.term.Apply(x2,x2),v2))))))
+
     def show_last_infos(self):
         print(f"Last evaluation took {self.last_eval_time}s for {self.last_reduction_number} reductions.")
 
@@ -503,7 +548,7 @@ class Parser:
             next = next.left
         if next == v:
             L.reverse()
-            return tuple(L)
+            return tuple(L) if len(L) > 0 else None
         return None
 
     def gen_list(self, L):
@@ -533,12 +578,18 @@ class Parser:
             L.reverse()
             return L
         return None
-        
-    def format_term(self, t:term.Term) -> str:
-        # check if exist
+
+    def get_free_var(self, t:term.Term) -> str:
         for v in self.free_vars:
             if t.is_equals(self.free_vars[v][0]):
                 return v
+        return None
+        
+    def format_term(self, t:term.Term) -> str:
+        # check if exist
+        f = self.get_free_var(t)
+        if f != None:
+            return f
         # check if number
         n = self.get_number(t)
         if n != None:

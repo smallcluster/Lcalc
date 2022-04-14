@@ -6,31 +6,49 @@ class TermType(Enum):
     VARIABLE = 3
 
 class Term:
-    def __init__(self, left, right, type, isrecursive=False):
+    def __init__(self, left, right, type):
         self.left = left
         self.right = right
         self.type = type
-        self.isrecursive = isrecursive
 
     def beta_reduce(self, verbose=False):
-        t = self
+        t, oldt = self, self
         n = 0
-        while t.can_beta_reduce():
-            t = t.one_step_beta_reduce()
+        if verbose:
+            print(f"{n} -> {t}")
+        # do ... while
+        t, reduced = t.one_step_beta_reduce()
+        if t == None or not reduced:
+            if verbose:
+                print(f"1 -> {oldt}")
+            return (oldt, n)
+        while reduced:
             n += 1
+            oldt = t
             if verbose:
                 print(f"{n} -> {t}")
-        return (t, n)
+            t, reduced = t.one_step_beta_reduce()
+            
+        return (oldt, n)
 
     def eta_reduce(self, verbose=False):
-        t = self
+        t, oldt = self, self
         n = 0
-        while t.can_eta_reduce():
-            t = t.one_step_eta_reduce()
+        if verbose:
+            print(f"{n} -> {t}")
+        # do ... while
+        t, reduced = t.one_step_eta_reduce()
+        if t == None or not reduced:
+            if verbose:
+                print(f"1 -> {oldt}")
+            return (oldt, n)
+        while reduced:
             n += 1
+            oldt = t
             if verbose:
                 print(f"{n} -> {t}")
-        return (t, n)
+            t, reduced = t.one_step_eta_reduce()
+        return (oldt, n)
     
     def reduce(self, verbose=False):
         t, nb = self.beta_reduce(verbose)
@@ -128,13 +146,13 @@ class Term:
         pass
     
 class Abstract(Term):
-    def __init__(self, var, term, isrecursive=False):
-        super().__init__(None, term, TermType.ABSTRACT, isrecursive)
+    def __init__(self, var, term):
+        super().__init__(None, term, TermType.ABSTRACT)
         self.var = var
 
     def copy(self):
         var = Variable(self.var.name)
-        return Abstract(var, self.right.replace(self.var, var), self.isrecursive)
+        return Abstract(var, self.right.replace(self.var, var))
 
     def to_string(self) -> str:
         txt = '\u03BB'+str(self.var)
@@ -144,8 +162,8 @@ class Abstract(Term):
             next = next.right
         return f"{txt}.{next.to_string()}"
 
-    def can_beta_reduce(self) -> bool:
-        return self.right.can_beta_reduce()
+    # def can_beta_reduce(self) -> bool:
+    #     return self.right.can_beta_reduce()
 
     def replace(self, var, term):
         if self.var == var:
@@ -156,31 +174,33 @@ class Abstract(Term):
 
     def one_step_beta_reduce(self):
         t = self.copy()
-        return Abstract(t.var, t.right.one_step_beta_reduce())
+        r = t.right.one_step_beta_reduce()
+        return (Abstract(t.var, r[0]), True) if r[1] else (None, False)
 
     def get_abstracted_vars(self):
         return self.right.get_abstracted_vars()+[self.var]
 
-    def can_eta_reduce(self) -> bool:
-        if self.right.type == TermType.APPLY and self.right.right == self.var and not self.right.left.is_var_in(self.var):
-            return True
-        return self.right.can_eta_reduce()
+    # def can_eta_reduce(self) -> bool:
+    #     if self.right.type == TermType.APPLY and self.right.right == self.var and not self.right.left.is_var_in(self.var):
+    #         return True
+    #     return self.right.can_eta_reduce()
     
     def one_step_eta_reduce(self):
         if self.right.type == TermType.APPLY and self.right.right == self.var and not self.right.left.is_var_in(self.var):
-            return self.right.left
+            return (self.right.left, True)
         t = self.copy()
-        return Abstract(t.var, t.right.one_step_eta_reduce())
+        r = t.right.one_step_eta_reduce()
+        return (Abstract(t.var, r[0]), True) if r[1] else (None, False)
 
     def is_var_in(self, var):
         return self.right.is_var_in(var)
 
 class Apply(Term):
-    def __init__(self, left, right, isrecursive=False):
-        super().__init__(left, right, TermType.APPLY, isrecursive)
+    def __init__(self, left, right):
+        super().__init__(left, right, TermType.APPLY)
 
     def copy(self):
-        return Apply(self.left.copy(), self.right.copy(), self.isrecursive)
+        return Apply(self.left.copy(), self.right.copy())
     
     def to_string(self) -> str:
         if (self.left.type == TermType.VARIABLE or self.left.type == TermType.APPLY ) and self.right.type == TermType.VARIABLE:
@@ -195,32 +215,38 @@ class Apply(Term):
             return f"{self.left.to_string()} ({self.right.to_string()})"
 
 
-    def can_beta_reduce(self) -> bool:
-        if self.left.type == TermType.ABSTRACT:
-            return True
-        elif self.left.can_beta_reduce():
-            return True
-        return self.right.can_beta_reduce()
+    # def can_beta_reduce(self) -> bool:
+    #     if self.left.type == TermType.ABSTRACT:
+    #         return True
+    #     elif self.left.can_beta_reduce():
+    #         return True
+    #     return self.right.can_beta_reduce()
 
-    def can_eta_reduce(self) -> bool:
-        if self.left.can_eta_reduce():
-            return True
-        return self.right.can_eta_reduce()
+    # def can_eta_reduce(self) -> bool:
+    #     if self.left.can_eta_reduce():
+    #         return True
+    #     return self.right.can_eta_reduce()
 
     def one_step_eta_reduce(self):
-        if self.left.can_eta_reduce():
-            return Apply(self.left.one_step_eta_reduce(), self.right)
-        return Apply(self.left, self.right.one_step_eta_reduce())
+        r = self.left.one_step_eta_reduce()
+        if r[1]:
+            return (Apply(r[0], self.right), True)
+        else:
+            rr = self.right.one_step_eta_reduce()
+            return (Apply(self.left, rr[0]), rr[1])
 
     def replace(self, var, term):
         return Apply(self.left.replace(var, term), self.right.replace(var, term))
 
     def one_step_beta_reduce(self):
         if self.left.type == TermType.ABSTRACT:
-            return self.left.replace(self.left.var, self.right)
-        elif self.left.can_beta_reduce():
-            return Apply(self.left.one_step_beta_reduce(), self.right)
-        return Apply(self.left, self.right.one_step_beta_reduce())
+            return (self.left.replace(self.left.var, self.right), True)
+        r = self.left.one_step_beta_reduce()
+        if r[1]:
+            return (Apply(r[0], self.right), True)
+        else:
+            rr = self.right.one_step_beta_reduce()
+            return  (Apply(self.left, rr[0]), rr[1])
 
     def get_abstracted_vars(self):
         return self.left.get_abstracted_vars() + self.right.get_abstracted_vars()
@@ -229,8 +255,8 @@ class Apply(Term):
         return self.left.is_var_in(var) or self.right.is_var_in(var)
 
 class Variable(Term):
-    def __init__(self, name, isrecursive=False):
-        super().__init__(None, None, TermType.VARIABLE, isrecursive)
+    def __init__(self, name):
+        super().__init__(None, None, TermType.VARIABLE)
         self.name = name
 
     def copy(self):
@@ -242,11 +268,11 @@ class Variable(Term):
     def to_string(self):
         return self.name
     
-    def can_beta_reduce(self) -> bool:
-        return False
+    # def can_beta_reduce(self) -> bool:
+    #     return False
 
-    def can_eta_reduce(self) -> bool:
-        return False
+    # def can_eta_reduce(self) -> bool:
+    #     return False
 
     def replace(self, var, term):
         if self == var:
@@ -254,10 +280,10 @@ class Variable(Term):
         return self
 
     def one_step_beta_reduce(self):
-        return self
+        return (self, False)
 
     def one_step_eta_reduce(self):
-        return self
+        return (self, False)
 
     def get_abstracted_vars(self):
         return []

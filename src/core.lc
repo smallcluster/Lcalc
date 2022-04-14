@@ -1,1 +1,5 @@
 id := \x.x;
+turingc <- (\x y. y (x x y))(\x y. y (x x y));
+curryc <- (\x y. x y x)(\y x. y (x y x) );
+staticc <- \f. (\x. f (\v. x x v)) (\x. f (\v. x x v));
+
