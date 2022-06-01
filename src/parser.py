@@ -1,4 +1,6 @@
 import sys
+
+from pygments import highlight
 import term
 import os
 import time
@@ -247,7 +249,7 @@ class Parser:
                 print("NAME := TERM; -> assign evaluated term to a variable, ex : id := (\\x.x) 2;")
                 print("NAME <- TERM; -> assign a term to a variable without evaluating it")
                 print("Free variables must be defined and are captured by value.")
-                print("Built in Support for church numerals and tuples ex: print <1,2,3>;")
+                print("Built in Support for church numerals, tuples (ex: <1,2,3>) and list (ex: [1,2,3]).")
                 print("-------- COMMAND LIST --------")
                 print("help; -> display this help")
                 print("clear; -> clear console output")
@@ -258,6 +260,7 @@ class Parser:
                 print("reduce beta(default)/eta/both; -> evaluation strategy : leftmost outermost beta/eta reduction or both")
                 print("defaultcombinator T; -> specify the default fixed point combinator (Turing by default)")
                 print("import \"path\"; -> load terms from file")
+                print("latexexport TERM \"path\" [eval | steps | highlight | horizontal]; -> export latex forest representation")
                 print("------------------------------")
             # clear
             elif self.token == Token("clear", None, "NAME"):
@@ -310,17 +313,7 @@ class Parser:
             elif self.token == Token("print", None, "NAME"):
                 self.match(self.token)
                 t, recursive = self.T([])
-                start_time = time.time()
-                if self.reduce_beta and self.reduce_eta:
-                    t, n = t.reduce(self.verbose)
-                elif self.reduce_beta:
-                    t, n = t.beta_reduce(self.verbose)
-                elif self.reduce_eta:
-                    t, n = t.eta_reduce(self.verbose)
-                self.last_eval_time = time.time() - start_time
-                self.last_reduction_number = n
-                if self.verbose:
-                    self.show_last_infos()
+                t = self.eval_term(t)
                 print(self.format_term(t))
             # printnoeval T
             elif self.token == Token("printnoeval", None, "NAME"):
@@ -351,6 +344,56 @@ class Parser:
                 self.match(self.token)
                 t, recursive = self.T([])
                 self.combinator = t
+            # latexexport T "path" [eval steps highlight]
+            elif self.token == Token("latexexport"):
+                self.match(self.token)
+
+                # get Term
+                t, recursive = self.T([])
+
+                # get path
+                if self.token.type != "PATH":
+                    raise ValueError(f"Expected a path name, got {self.token}")
+                path = self.token.value
+                self.match(self.token)
+                path = os.path.abspath(path) # convert to absolute
+
+                # get options
+                opts = [Token("eval"), Token("steps"), Token("highlight"), Token("horizontal")]
+                eval = False
+                steps = False
+                highlight = False
+                horizontal = False
+                while self.token in opts:
+                    if self.token == opts[0]:
+                        eval = True
+                    elif self.token == opts[1]:
+                        steps = True
+                    elif self.token == opts[2]:
+                        highlight = True
+                    elif self.token == opts[3]:
+                        horizontal = True
+                    self.match(self.token)
+                
+                # export latex
+                with open(path, "w") as f:
+                    if eval and steps:
+                        t = self.eval_term(t, f, highlight, horizontal)
+                        return
+                    elif eval:
+                        t = self.eval_term(t)
+                    
+                    f.write("\\begin{forest}\n")
+                    if horizontal:
+                        f.write("for tree={grow=east, s sep=3mm}\n")
+                    else:
+                        f.write("for tree={s sep=3mm}\n")
+                    f.write("["+t.latex_forest_format(highlight)+"]\n")
+                    f.write("\\end{forest}")
+                    if horizontal:
+                        f.write("\\\\")
+                    f.write("\n")
+
             # variable assignation
             # Name := T | Name <- T
             else:
@@ -377,17 +420,7 @@ class Parser:
                     self.free_vars[var_name] = (t, False)
                 else:
                     #eval
-                    start_time = time.time()
-                    if self.reduce_beta and self.reduce_eta:
-                        t, n = t.reduce(self.verbose)
-                    elif self.reduce_beta:
-                        t, n = t.beta_reduce(self.verbose)
-                    elif self.reduce_eta:
-                        t, n = t.eta_reduce(self.verbose)
-                    self.last_eval_time = time.time() - start_time
-                    self.last_reduction_number = n
-                    if self.verbose:
-                        self.show_last_infos()
+                    t = self.eval_term(t)
                     self.free_vars[var_name] = (t, False)
         else:
             raise ValueError(f"Language keyword or variable name expected, got {self.token.name}.")
@@ -640,3 +673,19 @@ class Parser:
             return buffer[:-1]+"]"
         # unknown
         return str(t)
+
+    def eval_term(self, t: term.Term, latex_export_file=None, highlight = False, horizontal = False) -> term.Term:
+        start_time = time.time()
+        if self.reduce_beta and self.reduce_eta:
+            t, n = t.reduce(self.verbose, latex_export_file, highlight, horizontal)
+        elif self.reduce_beta:
+            t, n = t.beta_reduce(self.verbose, latex_export_file, highlight, horizontal)
+        elif self.reduce_eta:
+            t, n = t.eta_reduce(self.verbose, latex_export_file, highlight, horizontal)
+        self.last_eval_time = time.time() - start_time
+        self.last_reduction_number = n
+        if self.verbose:
+            self.show_last_infos()
+        return t
+
+

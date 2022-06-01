@@ -1,5 +1,5 @@
 from enum import Enum
-import queue
+from functools import reduce
 
 class TermType(Enum):
     ABSTRACT = 1
@@ -12,45 +12,92 @@ class Term:
         self.right = right
         self.type = type
 
-    def beta_reduce(self, verbose=False):
-        t, oldt = self, self
+    def beta_reduce(self, verbose=False, latex_export_file=None, highlight = False, horizontal = False, n = 0, only_method = True):
+        old, next = self, self
         n = 0
         if verbose:
-            print(f"{n} -> {t}")
-        # do ... while
-        t, reduced = t.one_step_beta_reduce()
-        if t == None or not reduced:
-            return (oldt, n)
-        while reduced:
+            print(f"{n} -> {old}")
+        while True:
+            next, beta_reduced = old.one_step_beta_reduce()
+            if not beta_reduced:
+                if latex_export_file != None:
+                    self.write_latex_step(old, latex_export_file, n, False, False, horizontal, True)
+                break
+            elif latex_export_file != None:
+                self.write_latex_step(old, latex_export_file, n, True, highlight, horizontal, False)
+                self.write_latex_sep(latex_export_file, True, horizontal)
+            old = next
             n += 1
-            oldt = t
             if verbose:
-                print(f"{n} -> {t}")
-            t, reduced = t.one_step_beta_reduce()
-            
-        return (oldt, n)
+                print(f"{n} -b> {next}")
+        return (old, n)
 
-    def eta_reduce(self, verbose=False):
-        t, oldt = self, self
+    def eta_reduce(self, verbose=False, latex_export_file=None, highlight = False, horizontal = False):
+        old, next = self, self
         n = 0
         if verbose:
-            print(f"{n} -> {t}")
-        # do ... while
-        t, reduced = t.one_step_eta_reduce()
-        if t == None or not reduced:
-            return (oldt, n)
-        while reduced:
+            print(f"{n} -> {old}")
+        while True:
+            next, eta_reduce = old.one_step_eta_reduce()
+            if not eta_reduce:
+                if latex_export_file != None:
+                    self.write_latex_step(old, latex_export_file, n, False, False, horizontal, True)
+                break
+            elif latex_export_file != None:
+                self.write_latex_step(old, latex_export_file, n, False, highlight, horizontal, False)
+                self.write_latex_sep(latex_export_file, False, horizontal)
+            old = next
             n += 1
-            oldt = t
             if verbose:
-                print(f"{n} -> {t}")
-            t, reduced = t.one_step_eta_reduce()
-        return (oldt, n)
+                print(f"{n} -e> {next}")
+        return (old, n)
     
-    def reduce(self, verbose=False):
-        t, nb = self.beta_reduce(verbose)
-        t, ne = t.eta_reduce(verbose)
-        return (t, nb+ne)
+    def reduce(self, verbose=False, latex_export_file=None, highlight = False, horizontal = False):
+        old, next = self, self
+        n = 0
+        if verbose:
+            print(f"{n} -> {old}")
+        while True:
+            next, beta_reduced = old.one_step_beta_reduce()
+            if not beta_reduced:
+                next, eta_reduced = old.one_step_eta_reduce()
+                if not eta_reduced:
+                    if latex_export_file != None:
+                        self.write_latex_step(old, latex_export_file, n, False, False, horizontal, True)
+                    break
+                elif latex_export_file != None:
+                    self.write_latex_step(old, latex_export_file, n, False, highlight, horizontal, False)
+                    self.write_latex_sep(latex_export_file, False, horizontal)
+            elif latex_export_file != None:
+                self.write_latex_step(old, latex_export_file, n, True, highlight, horizontal, False)
+                self.write_latex_sep(latex_export_file, True, horizontal)
+            old = next
+            n += 1
+            if verbose:
+                print(str(n)+(" -b> " if beta_reduced else " -e> ")+str(next))
+        return (old, n)
+
+    def write_latex_sep(self, f, beta, horizontal):
+        symb = "beta" if beta else "eta"
+        if horizontal:
+            f.write("$\\big\\downarrow_{\\"+symb+"}$\\\\")
+        else:
+            f.write("$\\longrightarrow_{\\"+symb+"}$")
+        f.write("\n")
+
+    def write_latex_step(self,t, f, n, beta, highlight, horizontal, end = False):
+        if end:
+            info_reduce = ""
+        else:
+            info_reduce = "(beta)" if beta else "(eta)"
+        f.write(f"% step {n} {info_reduce}\n")
+        f.write("\\begin{forest}\n")
+        f.write("for tree={"+("grow=east," if horizontal else "")+"outer sep=0}\n")
+        f.write("["+t.latex_forest_format(beta, highlight)+"]\n")
+        f.write("\\node at (current bounding box.south) [below=1ex]{\emph{step "+str(n)+"}};\n")
+        f.write("\\end{forest}"+("\\\\" if horizontal else ""))
+        f.write("\n")
+            
 
     def __str__(self) -> str:
         vars = self.get_abstracted_vars()
@@ -137,6 +184,12 @@ class Term:
         pass
     def is_var_in(self, var):
         pass
+    def latex_forest_format(self, beta : bool, highlight_eval = False) -> str:
+        pass
+    def can_beta_reduce(self) -> bool:
+        pass
+    def can_eta_reduce(self) -> bool:
+        pass
     
 class Abstract(Term):
     def __init__(self, var, term):
@@ -179,6 +232,24 @@ class Abstract(Term):
 
     def is_var_in(self, var):
         return self.right.is_var_in(var)
+
+    def latex_forest_format(self, beta : bool, highlight_eval = False):
+        if highlight_eval and not beta and self.right.type == TermType.APPLY and self.right.right == self.var and not self.right.left.is_var_in(self.var):
+            box_command = ", tikz={\\node [circle,draw,red,inner sep=0,fit to=tree]{};}"
+            link_command = "{\draw[-,dotted,red] () to (spec var);}"
+            return f"$\lambda {self.var}$, circle, dotted, draw,inner sep=0, red, name=spec var [[{self.right.left.latex_forest_format(False)}] [{self.right.right.latex_forest_format(False)}{box_command}]{link_command}]"
+        else:
+            return f"$\lambda {self.var}$ [{self.right.latex_forest_format(beta, highlight_eval)}]"
+
+    def can_beta_reduce(self):
+        return self.right.can_beta_reduce()
+    
+    def can_eta_reduce(self) -> bool:
+        if self.right.type == TermType.APPLY and self.right.right == self.var and not self.right.left.is_var_in(self.var):
+            return True
+        else:
+            return self.right.can_eta_reduce()
+
 
 class Apply(Term):
     def __init__(self, left, right):
@@ -226,6 +297,41 @@ class Apply(Term):
     def is_var_in(self, var):
         return self.left.is_var_in(var) or self.right.is_var_in(var)
 
+    def can_beta_reduce(self):
+        if self.left.type == TermType.ABSTRACT:
+            return True
+        elif self.left.can_beta_reduce():
+            return True
+        return self.right.can_beta_reduce()
+
+    def can_eta_reduce(self) -> bool:
+        if self.left.can_eta_reduce():
+            return True
+        return self.right.can_eta_reduce()
+
+    def latex_forest_format(self, beta : bool, highlight_eval = False):
+        if highlight_eval and beta:
+            if self.left.type == TermType.ABSTRACT:
+                box_command = ", tikz={\\node [draw,red, inner sep=0,fit to=tree]{};}"
+                if self.right.type == TermType.APPLY:
+                    return f"[{self.left.latex_forest_format(True)}] [{box_command} {self.right.latex_forest_format(True)}]"
+                elif self.right.type == TermType.ABSTRACT:
+                    return f"[{self.left.latex_forest_format(True)}] [$\\lambda {self.right.var}${box_command} [{self.right.right.latex_forest_format(True)}]]"
+                else:
+                    return f"[{self.left.latex_forest_format(True)}] [{self.right.latex_forest_format(True)}{box_command}]"
+            elif self.left.can_beta_reduce():
+                return f"[{self.left.latex_forest_format(True, True)}] [{self.right.latex_forest_format(True)}]"
+            else :
+                return f"[{self.left.latex_forest_format(True)}] [{self.right.latex_forest_format(True,True)}]"
+        elif highlight_eval and not beta:
+            if self.left.can_eta_reduce():
+                return f"[{self.left.latex_forest_format(False, True)}] [{self.right.latex_forest_format(False)}]"
+            elif self.right.can_eta_reduce():
+                return f"[{self.left.latex_forest_format(False)}] [{self.right.latex_forest_format(False, True)}]"
+            else:
+                return f"[{self.left.latex_forest_format(False)}] [{self.right.latex_forest_format(False)}]"
+        else:
+            return f"[{self.left.latex_forest_format(False)}] [{self.right.latex_forest_format(False)}]"
 class Variable(Term):
     def __init__(self, name):
         super().__init__(None, None, TermType.VARIABLE)
@@ -256,4 +362,12 @@ class Variable(Term):
 
     def is_var_in(self, var):
         return self == var
+
+    def latex_forest_format(self, beta:bool, highlight_eval = False):
+        return f"${self.name}$"
+
+    def can_beta_reduce(self):
+        return False
+    def can_eta_reduce(self) -> bool:
+        return False
     
