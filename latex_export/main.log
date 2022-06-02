@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (MiKTeX 22.1) (preloaded format=pdflatex 2022.5.16)  1 JUN 2022 21:24
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (MiKTeX 22.1) (preloaded format=pdflatex 2022.5.16)  2 JUN 2022 11:42
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -474,12 +474,7 @@ Package grfext Info: Graphics extension search list:
 (grfext)             \AppendGraphicsExtensions on input line 504.
  (C:\Users\pjaff\AppData\Local\Programs\MiKTeX\tex/latex/00miktex\epstopdf-sys.cfg
 File: epstopdf-sys.cfg 2021/03/18 v2.0 Configuration of epstopdf for MiKTeX
-)) (test2.tex)
-Underfull \hbox (badness 10000) in paragraph at lines 6--13
-
- []
-
-(test.tex)
+)) (test2.tex) (test.tex)
 Overfull \hbox (27.68948pt too wide) in paragraph at lines 6--16
 [] $[][]\OMS/cmsy/m/n/10 ![]$ [] $[][]![]$ []
  []
@@ -493,17 +488,17 @@ Overfull \hbox (11.89383pt too wide) in paragraph at lines 6--16
 
 {C:/Users/pjaff/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}] [2] [3] [4] (main.aux) ) 
 Here is how much of TeX's memory you used:
- 28466 strings out of 478584
- 663047 string characters out of 2844401
- 977086 words of memory out of 3000000
- 46335 multiletter control sequences out of 15000+600000
+ 28441 strings out of 478584
+ 662463 string characters out of 2844401
+ 973893 words of memory out of 3000000
+ 46310 multiletter control sequences out of 15000+600000
  470664 words of font info for 33 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  206i,9n,176p,1651b,3395s stack positions out of 5000i,500n,10000p,200000b,80000s
-<C:/Users/pjaff/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx12.pfb><C:/Users/pjaff/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmex10.pfb><C:/Users/pjaff/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/pjaff/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi7.pfb><C:/Users/pjaff/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/pjaff/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/pjaff/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmti10.pfb>
-Output written on main.pdf (4 pages, 82777 bytes).
+<C:/Users/pjaff/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx12.pfb><C:/Users/pjaff/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/pjaff/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi7.pfb><C:/Users/pjaff/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/pjaff/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/pjaff/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmti10.pfb>
+Output written on main.pdf (4 pages, 73765 bytes).
 PDF statistics:
- 53 PDF objects out of 1000 (max. 8388607)
+ 48 PDF objects out of 1000 (max. 8388607)
  0 named destinations out of 1000 (max. 500000)
  13 words of extra memory for PDF output out of 10000 (max. 10000000)
 
