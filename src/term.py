@@ -1,5 +1,4 @@
 from enum import Enum
-from functools import reduce
 
 class TermType(Enum):
     ABSTRACT = 1

@@ -1,6 +1,5 @@
 import sys
 
-from pygments import highlight
 import term
 import os
 import time
