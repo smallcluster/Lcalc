@@ -14,6 +14,7 @@
 - Automatic support for recursively defined terms using fixed point combinators (**extremely slow**)
 - Built in support for Church numerals, tuples and lists encoding
 - Show/hide reduction steps with statistics (number of reductions and evaluation time)
+- Export a term and it's intermediate sub terms during evaluation to latex as a tree with the "forest" package
 
 For now, free variables in terms have to be defined first to use them. Furthermore, they are captured by value.
 

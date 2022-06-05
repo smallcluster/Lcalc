@@ -170,7 +170,7 @@ class Lexer:
                     return Token(self.buffer, None)
             # SYNTAX
             elif self.state == 5:
-                if c in "().;>,[]":
+                if c in "().;>,[]=":
                     return Token(c, None)
                 else:
                     # error
@@ -235,8 +235,8 @@ class Parser:
             self.I()
             self.match(Token(";", None))
             self.L()
-    # I -> help | clear | exit | listall |showlastinfos | verbose {("true"|"false")} | reduce {("both"|"beta"|"eta")} | import path | 
-    # print T | Name := T | Name <- T | defaultcombinator T;
+    # I -> help | clear | exit | listall |showlastinfos | verbose {true | false } | reduce { both| beta | eta} | import path | printnoeval T
+    # print T | Name := T | Name <- T | defaultcombinator T | latexexport T path {eval | {steps | steps=n} | highlight | horizontal}
     def I(self) -> None:
         if self.token.type == "NAME":
             # --built in keywords
@@ -260,7 +260,10 @@ class Parser:
                 print("reduce beta(default)/eta/both; -> evaluation strategy : leftmost outermost beta/eta reduction or both")
                 print("defaultcombinator T; -> specify the default fixed point combinator (Turing by default)")
                 print("import \"path\"; -> load terms from file")
-                print("latexexport TERM \"path\" [eval | steps | highlight | horizontal]; -> export latex forest representation")
+                print("latexexport TERM \"path\" [eval | steps | highlight | horizontal |size=f]; -> export latex forest representation")
+                print("... steps -> all reductions steps")
+                print("... steps=n -> export only the n first reductions (n > 0)")
+                print("... size=f -> scale all trees by a factor ( 0 < f <= 1)")
                 print("------------------------------")
             # clear
             elif self.token == Token("clear", None, "NAME"):
@@ -364,21 +367,35 @@ class Parser:
                 steps = False
                 highlight = False
                 horizontal = False
+                max_steps = -1
                 while self.token in opts:
                     if self.token == opts[0]:
                         eval = True
+                        self.match(self.token)
                     elif self.token == opts[1]:
                         steps = True
+                        self.match(self.token)
+                        if self.token == Token("="):
+                            self.match(self.token)
+                            if self.token.type == "NUMBER":
+                                max_steps = self.token.value
+                                if max_steps <= 0:
+                                    raise ValueError(f"Max steps value should be > 0. Got {self.token.value}")
+                                else:
+                                    self.match(self.token)
+                            else:
+                               raise ValueError(f"Max steps value needs to be a number. Got {self.token.value}") 
                     elif self.token == opts[2]:
                         highlight = True
+                        self.match(self.token)
                     elif self.token == opts[3]:
                         horizontal = True
-                    self.match(self.token)
-                
+                        self.match(self.token)
+
                 # export latex
                 with open(path, "w") as f:
                     if eval and steps:
-                        t = self.eval_term(t, f, highlight, horizontal)
+                        t = self.eval_term(t, f, highlight, horizontal, max_steps=max_steps)
                         return
                     elif eval:
                         t = self.eval_term(t)
@@ -426,7 +443,7 @@ class Parser:
             raise ValueError(f"Language keyword or variable name expected, got {self.token.name}.")
 
     # OP Apply 
-    # T -> R {("R")*}
+    # T -> R {R*}
     def T(self, context, recurse_name : str = None, recurse_var:term.Variable = None):
         context = context[:]
         e, recurse = self.R(context, recurse_name, recurse_var)
@@ -447,7 +464,7 @@ class Parser:
             e = self.list_pile(e, r)
         return (e, recurse)
 
-    # E -> (T) | Name | Num | \ {("Name")+} . T | <T {("," "T")+}> | [{("T")? ("," "T")+}]
+    # E -> (T) | Name | Num | \ {Name+} . T | <T {(, T)+}> | [{T? (, T)+}]
     def E(self, context, recurse_name : str = None, recurse_var:term.Variable = None):
         context = context[:]
         # tuple
@@ -674,14 +691,14 @@ class Parser:
         # unknown
         return str(t)
 
-    def eval_term(self, t: term.Term, latex_export_file=None, highlight = False, horizontal = False) -> term.Term:
+    def eval_term(self, t: term.Term, latex_export_file=None, highlight = False, horizontal = False, max_steps=-1) -> term.Term:
         start_time = time.time()
         if self.reduce_beta and self.reduce_eta:
-            t, n = t.reduce(self.verbose, latex_export_file, highlight, horizontal)
+            t, n = t.reduce(self.verbose, latex_export_file, highlight, horizontal, max_steps=max_steps)
         elif self.reduce_beta:
-            t, n = t.beta_reduce(self.verbose, latex_export_file, highlight, horizontal)
+            t, n = t.beta_reduce(self.verbose, latex_export_file, highlight, horizontal, max_steps=max_steps)
         elif self.reduce_eta:
-            t, n = t.eta_reduce(self.verbose, latex_export_file, highlight, horizontal)
+            t, n = t.eta_reduce(self.verbose, latex_export_file, highlight, horizontal, max_steps=max_steps)
         self.last_eval_time = time.time() - start_time
         self.last_reduction_number = n
         if self.verbose:

@@ -12,12 +12,14 @@ class Term:
         self.right = right
         self.type = type
 
-    def beta_reduce(self, verbose=False, latex_export_file=None, highlight = False, horizontal = False, n = 0, only_method = True):
+    def beta_reduce(self, verbose=False, latex_export_file=None, highlight = False, horizontal = False, n = 0, only_method = True, max_steps=-1):
         old, next = self, self
         n = 0
         if verbose:
             print(f"{n} -> {old}")
         while True:
+            if n >= max_steps+1 and max_steps >= 0:
+                break
             next, beta_reduced = old.one_step_beta_reduce()
             if not beta_reduced:
                 if latex_export_file != None:
@@ -32,12 +34,14 @@ class Term:
                 print(f"{n} -b> {next}")
         return (old, n)
 
-    def eta_reduce(self, verbose=False, latex_export_file=None, highlight = False, horizontal = False):
+    def eta_reduce(self, verbose=False, latex_export_file=None, highlight = False, horizontal = False, max_steps=-1):
         old, next = self, self
         n = 0
         if verbose:
             print(f"{n} -> {old}")
         while True:
+            if n >= max_steps+1 and max_steps >= 0:
+                break
             next, eta_reduce = old.one_step_eta_reduce()
             if not eta_reduce:
                 if latex_export_file != None:
@@ -52,12 +56,14 @@ class Term:
                 print(f"{n} -e> {next}")
         return (old, n)
     
-    def reduce(self, verbose=False, latex_export_file=None, highlight = False, horizontal = False):
+    def reduce(self, verbose=False, latex_export_file=None, highlight = False, horizontal = False, max_steps=-1):
         old, next = self, self
         n = 0
         if verbose:
             print(f"{n} -> {old}")
         while True:
+            if n >= max_steps+1 and max_steps >= 0:
+                break
             next, beta_reduced = old.one_step_beta_reduce()
             if not beta_reduced:
                 next, eta_reduced = old.one_step_eta_reduce()
