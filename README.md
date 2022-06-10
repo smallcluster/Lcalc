@@ -43,7 +43,7 @@ To import a library just run/write:
 import "path_to_script.lc";
 ```
 Default libraries:
-**WARINGING, SUBJECT TO CHANGES**
+**WARNING, SUBJECT TO CHANGES**
 - ``combinators.lc`` : some fixed point combinators
 - ``booleans.lc`` : definition of true/false and conditional structures
 - ``numbers.lc`` : some functions for natural numbers (add, sub, pred, ...)
