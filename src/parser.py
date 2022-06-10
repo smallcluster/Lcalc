@@ -259,10 +259,9 @@ class Parser:
                 print("reduce beta(default)/eta/both; -> evaluation strategy : leftmost outermost beta/eta reduction or both")
                 print("defaultcombinator T; -> specify the default fixed point combinator (Turing by default)")
                 print("import \"path\"; -> load terms from file")
-                print("latexexport TERM \"path\" [eval | steps | highlight | horizontal |size=f]; -> export latex forest representation")
+                print("latexexport TERM \"path\" [eval | steps | highlight | horizontal]; -> export latex forest representation")
                 print("... steps -> all reductions steps")
                 print("... steps=n -> export only the n first reductions (n > 0)")
-                print("... size=f -> scale all trees by a factor ( 0 < f <= 1)")
                 print("------------------------------")
             # clear
             elif self.token == Token("clear", None, "NAME"):

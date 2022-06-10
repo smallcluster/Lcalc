@@ -1,3 +1,3 @@
 true := \x y.x;
 false := \x y.y;
-ifelse := \x.x;
+ifthenelse := \x.x;
