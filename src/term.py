@@ -185,8 +185,6 @@ class Term:
         pass
     def replace(self, var, term):
         pass
-    def get_abstracted_vars(self):
-        pass
     def is_var_in(self, var):
         pass
     def latex_forest_format(self, beta : bool, highlight_eval = False) -> str:

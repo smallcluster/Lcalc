@@ -1,5 +1,4 @@
 import sys
-
 import term
 import os
 import time
@@ -166,7 +165,7 @@ class Lexer:
                     else:
                         self.buffer += c
                 else:
-                    return Token(self.buffer, None)
+                    return Token(self.buffer, None, "NAME")
             # SYNTAX
             elif self.state == 5:
                 if c in "().;>,[]=":
