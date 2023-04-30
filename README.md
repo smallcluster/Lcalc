@@ -30,6 +30,7 @@ Python 3, tested on python 3.8 .
 python lcalc.py
 ```
 type ``help;`` to show the list of commands and the basic syntax.
+
 ## Execute script
 
 ```
@@ -43,13 +44,24 @@ To import a library just run/write:
 import "path_to_script.lc";
 ```
 Default libraries:
-**WARNING, SUBJECT TO CHANGES**
 - ``combinators.lc`` : some fixed point combinators
 - ``booleans.lc`` : definition of true/false and conditional structures
 - ``numbers.lc`` : some functions for natural numbers (add, sub, pred, ...)
 - ``tuples.lc`` : some functions for tuples
 - ``lists.lc`` : some functions for lists
 
-# Known issues
+# ⚠️ Known issues
 
-Due to the way Python implement its recursive function call stack, big terms (trees with a large depth) will provoke the Python process to panic (Ex: printing a number larger than 10000), resulting in a segmentation fault. The only solution, for now, is to use a stackless Python interpreter (Ex: Stackless Python). 
+## Crashs
+
+Due to the way Python implements its recursive function call stack, big terms (trees with a large depth) will provoke the Python process to panic (Ex: printing a number larger than 10000), resulting in a segmentation fault. The only solution, for now, is to use a stackless Python interpreter (Ex: Stackless Python).
+
+## Speed
+
+This is a *naive* lamda calculus interpreter: the parser generates the AST then evals it by beta/eta reducing its tree representation. It mimics how you would do it with a pen and paper, and to be honest, it's quite slow! Furthermore, Python isn't famous for its speed...
+
+However, it is written in pure Python and only use a few modules from the standard Python library. Wich means it works really well with [the GraalPy interpreter](https://github.com/oracle/graalpython) (a Python 3 implementation backed by the GraalVM JVM, an optimized JVM).
+There is approximately a 10x speed improvement using [GraalPy](https://github.com/oracle/graalpython) to run Lcalc.
+
+For example, on a Ryzen 7 3700X, `print fact 5;` (recursion using Turing's fixed point combinator) took ~1h 20min with CPython versus ~7min 30s with [GraalPy](https://github.com/oracle/graalpython).
+
