@@ -16,7 +16,7 @@
 - Show/hide reduction steps with statistics (number of reductions and evaluation time)
 - Export a term and it's intermediate sub terms during evaluation to latex as a tree with the "forest" package
 
-For now, free variables in terms have to be defined first to use them. Furthermore, they are captured by value.
+Free variables in terms have to be defined first to use them. Furthermore, they are captured by value.
 
 # Requirements
 
