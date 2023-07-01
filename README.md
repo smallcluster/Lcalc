@@ -11,7 +11,7 @@
 
 - Haskell ('\\') or utf8 lambda ('λ') notation
 - Leftmost-outermost Beta and/or Eta reduction
-- Automatic support for recursively defined terms using fixed point combinators (**extremely slow**)
+- Automatic support for recursively defined terms by using fixed point combinators (**extremely slow**)
 - Built in support for Church numerals, tuples and lists encoding
 - Show/hide reduction steps with statistics (number of reductions and evaluation time)
 - Export a term and it's intermediate sub terms during evaluation to latex as a tree with the "forest" package
